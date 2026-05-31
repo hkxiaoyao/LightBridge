@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# LightBridge Installation Script
-# LightBridge 安装脚本
+# LightBridge Installation and Migration Script
+# LightBridge 安装与迁移脚本
 # Usage: curl -sSL https://raw.githubusercontent.com/WilliamWang1721/LightBridge/main/deploy/install.sh | bash
 #
 
@@ -36,6 +36,14 @@ INSTALL_DIR="/opt/LightBridge"
 SERVICE_NAME="LightBridge"
 SERVICE_USER="LightBridge"
 CONFIG_DIR="/etc/LightBridge"
+LEGACY_INSTALL_DIR="/opt/sub2api"
+LEGACY_SERVICE_NAME="sub2api"
+LEGACY_SERVICE_USER="sub2api"
+LEGACY_CONFIG_DIR="/etc/sub2api"
+MIGRATION_BACKUP_ROOT="/opt/LightBridge-migration-backups"
+LEGACY_BINARY_PATH=""
+LEGACY_SERVICE_FRAGMENT=""
+LEGACY_ACTIVE_SERVICE_USER="$LEGACY_SERVICE_USER"
 
 # Active install target. Upgrade commands may point these at a legacy
 # Sub2API systemd deployment so the binary is replaced in place.
@@ -71,7 +79,7 @@ declare -A MSG_ZH=(
     ["enter_choice"]="请输入选择 (默认: 1)"
 
     # Installation
-    ["install_title"]="LightBridge 安装脚本"
+    ["install_title"]="LightBridge 安装与迁移脚本"
     ["run_as_root"]="请使用 root 权限运行 (使用 sudo)"
     ["detected_platform"]="检测到平台"
     ["unsupported_arch"]="不支持的架构"
@@ -124,6 +132,17 @@ declare -A MSG_ZH=(
     ["starting_service"]="正在启动服务..."
     ["upgrade_complete"]="升级完成！"
 
+    # Migration
+    ["migrating"]="正在将 Sub2API 迁移到 LightBridge..."
+    ["migration_complete"]="迁移完成！"
+    ["legacy_not_found"]="未检测到可迁移的 Sub2API systemd 部署"
+    ["already_migrated"]="当前系统已检测到 LightBridge 部署"
+    ["migration_backup_dir"]="迁移备份目录"
+    ["disabling_legacy_service"]="正在禁用旧 Sub2API 服务..."
+    ["installing_lightbridge_service"]="正在安装 LightBridge systemd 服务..."
+    ["migrating_runtime_files"]="正在迁移配置与运行数据..."
+    ["legacy_binary"]="旧二进制文件"
+
     # Version install
     ["installing_version"]="正在安装指定版本"
     ["version_not_found"]="指定版本不存在"
@@ -156,6 +175,7 @@ declare -A MSG_ZH=(
     ["cmd_none"]="(无参数)"
     ["cmd_install"]="安装 LightBridge"
     ["cmd_upgrade"]="升级到最新版本"
+    ["cmd_migrate"]="从 Sub2API 自动迁移到 LightBridge"
     ["cmd_uninstall"]="卸载 LightBridge"
     ["cmd_install_version"]="安装/回退到指定版本"
     ["cmd_list_versions"]="列出可用版本"
@@ -196,7 +216,7 @@ declare -A MSG_EN=(
     ["enter_choice"]="Enter your choice (default: 1)"
 
     # Installation
-    ["install_title"]="LightBridge Installation Script"
+    ["install_title"]="LightBridge Installation and Migration Script"
     ["run_as_root"]="Please run as root (use sudo)"
     ["detected_platform"]="Detected platform"
     ["unsupported_arch"]="Unsupported architecture"
@@ -249,6 +269,17 @@ declare -A MSG_EN=(
     ["starting_service"]="Starting service..."
     ["upgrade_complete"]="Upgrade completed!"
 
+    # Migration
+    ["migrating"]="Migrating Sub2API to LightBridge..."
+    ["migration_complete"]="Migration completed!"
+    ["legacy_not_found"]="No migratable Sub2API systemd deployment was detected"
+    ["already_migrated"]="LightBridge deployment already detected on this system"
+    ["migration_backup_dir"]="Migration backup directory"
+    ["disabling_legacy_service"]="Disabling legacy Sub2API service..."
+    ["installing_lightbridge_service"]="Installing LightBridge systemd service..."
+    ["migrating_runtime_files"]="Migrating config and runtime data..."
+    ["legacy_binary"]="Legacy binary"
+
     # Version install
     ["installing_version"]="Installing specified version"
     ["version_not_found"]="Specified version not found"
@@ -281,6 +312,7 @@ declare -A MSG_EN=(
     ["cmd_none"]="(none)"
     ["cmd_install"]="Install LightBridge"
     ["cmd_upgrade"]="Upgrade to the latest version"
+    ["cmd_migrate"]="Automatically migrate from Sub2API to LightBridge"
     ["cmd_uninstall"]="Remove LightBridge"
     ["cmd_install_version"]="Install/rollback to a specific version"
     ["cmd_list_versions"]="List available versions"
@@ -337,7 +369,7 @@ print_error() {
 # When piped (curl | bash), stdin is not a terminal, but /dev/tty may still be available
 is_interactive() {
     # Check if /dev/tty is available (works even when piped)
-    [ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ]
+    [ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ] && { : < /dev/tty; } 2>/dev/null
 }
 
 # Select language
@@ -590,8 +622,18 @@ service_exists() {
     fi
 
     local fragment
-    fragment=$(systemctl show -p FragmentPath --value "$service" 2>/dev/null || true)
+    fragment=$(get_service_fragment "$service" 2>/dev/null || true)
     [ -n "$fragment" ] && [ "$fragment" != "n/a" ]
+}
+
+get_service_fragment() {
+    local service="$1"
+
+    if ! command -v systemctl &> /dev/null; then
+        return 1
+    fi
+
+    systemctl show -p FragmentPath --value "$service" 2>/dev/null | head -1
 }
 
 get_service_exec_binary() {
@@ -615,6 +657,20 @@ get_service_user() {
     fi
 
     systemctl show -p User --value "$service" 2>/dev/null | head -1
+}
+
+get_service_environment_value() {
+    local service="$1"
+    local key="$2"
+
+    if ! command -v systemctl &> /dev/null; then
+        return 1
+    fi
+
+    systemctl show -p Environment --value "$service" 2>/dev/null \
+        | tr ' ' '\n' \
+        | sed -n "s/^${key}=//p" \
+        | head -1
 }
 
 set_active_install() {
@@ -649,18 +705,47 @@ detect_existing_install() {
     fi
 
     local service_binary
-    if service_exists "sub2api"; then
-        service_binary=$(get_service_exec_binary "sub2api" 2>/dev/null || true)
+    if service_exists "$LEGACY_SERVICE_NAME"; then
+        service_binary=$(get_service_exec_binary "$LEGACY_SERVICE_NAME" 2>/dev/null || true)
         if [ -n "$service_binary" ] && [ -f "$service_binary" ]; then
-            set_active_install "$service_binary" "sub2api" "sub2api" "true"
+            set_active_install "$service_binary" "$LEGACY_SERVICE_NAME" "$LEGACY_SERVICE_USER" "true"
             return 0
         fi
     fi
 
     local binary_path
-    for binary_path in /opt/sub2api/sub2api /opt/sub2api/LightBridge /usr/local/bin/sub2api; do
+    for binary_path in "$LEGACY_INSTALL_DIR/sub2api" "$LEGACY_INSTALL_DIR/LightBridge" /usr/local/bin/sub2api; do
         if [ -f "$binary_path" ]; then
-            set_active_install "$binary_path" "sub2api" "sub2api" "true"
+            set_active_install "$binary_path" "$LEGACY_SERVICE_NAME" "$LEGACY_SERVICE_USER" "true"
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+detect_legacy_install() {
+    LEGACY_BINARY_PATH=""
+    LEGACY_SERVICE_FRAGMENT=""
+    LEGACY_ACTIVE_SERVICE_USER="$LEGACY_SERVICE_USER"
+
+    if service_exists "$LEGACY_SERVICE_NAME"; then
+        LEGACY_SERVICE_FRAGMENT=$(get_service_fragment "$LEGACY_SERVICE_NAME" 2>/dev/null || true)
+        LEGACY_BINARY_PATH=$(get_service_exec_binary "$LEGACY_SERVICE_NAME" 2>/dev/null || true)
+        LEGACY_ACTIVE_SERVICE_USER=$(get_service_user "$LEGACY_SERVICE_NAME" 2>/dev/null || true)
+        if [ -z "$LEGACY_ACTIVE_SERVICE_USER" ]; then
+            LEGACY_ACTIVE_SERVICE_USER="$LEGACY_SERVICE_USER"
+        fi
+    fi
+
+    if [ -n "$LEGACY_BINARY_PATH" ] && [ -f "$LEGACY_BINARY_PATH" ]; then
+        return 0
+    fi
+
+    local binary_path
+    for binary_path in "$LEGACY_INSTALL_DIR/sub2api" "$LEGACY_INSTALL_DIR/LightBridge" /usr/local/bin/sub2api; do
+        if [ -f "$binary_path" ]; then
+            LEGACY_BINARY_PATH="$binary_path"
             return 0
         fi
     done
@@ -680,6 +765,114 @@ set_installed_binary_owner() {
     fi
 }
 
+copy_dir_contents() {
+    local source_dir="$1"
+    local target_dir="$2"
+
+    if [ -d "$source_dir" ]; then
+        mkdir -p "$target_dir"
+        cp -a "$source_dir"/. "$target_dir"/
+    fi
+}
+
+copy_file_if_exists() {
+    local source_file="$1"
+    local target_file="$2"
+
+    if [ -f "$source_file" ]; then
+        mkdir -p "$(dirname "$target_file")"
+        cp -a "$source_file" "$target_file"
+    fi
+}
+
+import_legacy_server_environment() {
+    local legacy_host=""
+    local legacy_port=""
+
+    if service_exists "$LEGACY_SERVICE_NAME"; then
+        legacy_host=$(get_service_environment_value "$LEGACY_SERVICE_NAME" "SERVER_HOST" 2>/dev/null || true)
+        legacy_port=$(get_service_environment_value "$LEGACY_SERVICE_NAME" "SERVER_PORT" 2>/dev/null || true)
+    fi
+
+    if [ -n "$legacy_host" ]; then
+        SERVER_HOST="$legacy_host"
+    fi
+    if [ -n "$legacy_port" ] && validate_port "$legacy_port"; then
+        SERVER_PORT="$legacy_port"
+    fi
+}
+
+backup_path_if_exists() {
+    local source_path="$1"
+    local backup_dir="$2"
+    local backup_name="${3:-$(basename "$source_path")}"
+
+    if [ -e "$source_path" ]; then
+        mkdir -p "$backup_dir"
+        cp -a "$source_path" "$backup_dir/$backup_name"
+    fi
+}
+
+copy_legacy_runtime_files() {
+    print_info "$(msg 'migrating_runtime_files')"
+
+    copy_dir_contents "$LEGACY_CONFIG_DIR" "$CONFIG_DIR"
+    copy_dir_contents "$LEGACY_INSTALL_DIR/data" "$INSTALL_DIR/data"
+
+    copy_file_if_exists "$LEGACY_INSTALL_DIR/config.yaml" "$INSTALL_DIR/config.yaml"
+    copy_file_if_exists "$LEGACY_INSTALL_DIR/config.yaml" "$CONFIG_DIR/config.yaml"
+    copy_file_if_exists "$LEGACY_CONFIG_DIR/config.yaml" "$CONFIG_DIR/config.yaml"
+    copy_file_if_exists "$LEGACY_CONFIG_DIR/config.yaml" "$INSTALL_DIR/config.yaml"
+
+    copy_file_if_exists "$LEGACY_INSTALL_DIR/.installed" "$INSTALL_DIR/.installed"
+    copy_file_if_exists "$LEGACY_CONFIG_DIR/.installed" "$INSTALL_DIR/.installed"
+    copy_file_if_exists "$LEGACY_CONFIG_DIR/.installed" "$CONFIG_DIR/.installed"
+}
+
+disable_legacy_service() {
+    print_info "$(msg 'disabling_legacy_service')"
+
+    if systemctl is-active --quiet "$LEGACY_SERVICE_NAME"; then
+        systemctl stop "$LEGACY_SERVICE_NAME" 2>/dev/null || true
+    fi
+
+    systemctl disable "$LEGACY_SERVICE_NAME" 2>/dev/null || true
+
+    # Only move locally installed unit files. Vendor/package unit files are left
+    # in place but disabled, so package managers remain in control.
+    if [ -n "$LEGACY_SERVICE_FRAGMENT" ] \
+        && [ -f "$LEGACY_SERVICE_FRAGMENT" ] \
+        && [[ "$LEGACY_SERVICE_FRAGMENT" == /etc/systemd/system/* ]]; then
+        mv "$LEGACY_SERVICE_FRAGMENT" "${LEGACY_SERVICE_FRAGMENT}.migrated-to-LightBridge" 2>/dev/null || true
+    fi
+
+    systemctl daemon-reload
+}
+
+print_migration_completion() {
+    local backup_dir="$1"
+    local display_host="${PUBLIC_IP:-YOUR_SERVER_IP}"
+    if [ "$SERVER_HOST" = "127.0.0.1" ]; then
+        display_host="127.0.0.1"
+    fi
+
+    echo ""
+    echo "=============================================="
+    print_success "$(msg 'migration_complete')"
+    echo "=============================================="
+    echo ""
+    echo "$(msg 'install_dir'): $INSTALL_DIR"
+    echo "$(msg 'migration_backup_dir'): $backup_dir"
+    echo "$(msg 'server_config_summary'): ${SERVER_HOST}:${SERVER_PORT}"
+    echo ""
+    print_info "URL: http://${display_host}:${SERVER_PORT}"
+    echo ""
+    echo "  $(msg 'cmd_status'):   sudo systemctl status LightBridge"
+    echo "  $(msg 'cmd_logs'):     sudo journalctl -u LightBridge -f"
+    echo "  $(msg 'cmd_restart'):  sudo systemctl restart LightBridge"
+    echo ""
+}
+
 # Download and extract
 download_and_extract() {
     local target_binary="${1:-$INSTALL_DIR/LightBridge}"
@@ -694,7 +887,7 @@ download_and_extract() {
 
     # Create temp directory
     TEMP_DIR=$(mktemp -d)
-    trap "rm -rf $TEMP_DIR" EXIT
+    trap 'rm -rf "$TEMP_DIR"' EXIT
 
     # Download archive
     if ! curl -sL "$download_url" -o "$TEMP_DIR/$archive_name"; then
@@ -705,8 +898,10 @@ download_and_extract() {
     # Download and verify checksum
     print_info "$(msg 'verifying_checksum')"
     if curl -sL "$checksum_url" -o "$TEMP_DIR/checksums.txt" 2>/dev/null; then
-        local expected_checksum=$(grep "$archive_name" "$TEMP_DIR/checksums.txt" | awk '{print $1}')
-        local actual_checksum=$(sha256sum "$TEMP_DIR/$archive_name" | awk '{print $1}')
+        local expected_checksum
+        local actual_checksum
+        expected_checksum=$(grep "$archive_name" "$TEMP_DIR/checksums.txt" | awk '{print $1}')
+        actual_checksum=$(sha256sum "$TEMP_DIR/$archive_name" | awk '{print $1}')
 
         if [ "$expected_checksum" != "$actual_checksum" ]; then
             print_error "$(msg 'checksum_failed')"
@@ -813,6 +1008,7 @@ ReadWritePaths=/opt/LightBridge
 
 # Environment - Server configuration
 Environment=GIN_MODE=release
+Environment=DATA_DIR=/opt/LightBridge
 Environment=SERVER_HOST=${SERVER_HOST}
 Environment=SERVER_PORT=${SERVER_PORT}
 
@@ -946,7 +1142,8 @@ upgrade() {
     fi
 
     # Backup current binary
-    local backup_path="${ACTIVE_BINARY_PATH}.backup.$(date +%Y%m%d%H%M%S)"
+    local backup_path
+    backup_path="${ACTIVE_BINARY_PATH}.backup.$(date +%Y%m%d%H%M%S)"
     cp "$ACTIVE_BINARY_PATH" "$backup_path"
     print_info "$(msg 'backup_created'): $backup_path"
 
@@ -1043,6 +1240,80 @@ install_version() {
     echo ""
     echo "  $(msg 'current_version'): $new_version"
     echo ""
+}
+
+migrate_sub2api_to_lightbridge() {
+    local target_version="${1:-}"
+    local backup_dir
+    local timestamp
+
+    if ! command -v systemctl &> /dev/null; then
+        print_error "systemd is required for Sub2API migration"
+        exit 1
+    fi
+
+    if [ -f "$INSTALL_DIR/LightBridge" ] || service_exists "$SERVICE_NAME"; then
+        print_warning "$(msg 'already_migrated')"
+        if [ -n "$target_version" ]; then
+            install_version "$target_version"
+        else
+            upgrade
+        fi
+        return
+    fi
+
+    if ! detect_legacy_install; then
+        print_error "$(msg 'legacy_not_found')"
+        exit 1
+    fi
+
+    print_info "$(msg 'migrating')"
+    print_info "$(msg 'legacy_binary'): $LEGACY_BINARY_PATH"
+    if [ -n "$LEGACY_SERVICE_FRAGMENT" ]; then
+        print_info "Legacy service: $LEGACY_SERVICE_FRAGMENT"
+    fi
+
+    import_legacy_server_environment
+
+    timestamp=$(date +%Y%m%d%H%M%S)
+    backup_dir="$MIGRATION_BACKUP_ROOT/$timestamp"
+    mkdir -p "$backup_dir"
+    print_info "$(msg 'migration_backup_dir'): $backup_dir"
+
+    backup_path_if_exists "$LEGACY_BINARY_PATH" "$backup_dir" "$(basename "$LEGACY_BINARY_PATH")"
+    if [ -n "$LEGACY_SERVICE_FRAGMENT" ]; then
+        backup_path_if_exists "$LEGACY_SERVICE_FRAGMENT" "$backup_dir" "$(basename "$LEGACY_SERVICE_FRAGMENT")"
+    fi
+    backup_path_if_exists "$LEGACY_INSTALL_DIR" "$backup_dir" "opt-sub2api"
+    backup_path_if_exists "$LEGACY_CONFIG_DIR" "$backup_dir" "etc-sub2api"
+    backup_path_if_exists "$INSTALL_DIR" "$backup_dir" "preexisting-opt-LightBridge"
+    backup_path_if_exists "$CONFIG_DIR" "$backup_dir" "preexisting-etc-LightBridge"
+
+    if [ -n "$target_version" ]; then
+        LATEST_VERSION=$(validate_version "$target_version")
+    else
+        get_latest_version
+    fi
+
+    download_and_extract "$INSTALL_DIR/LightBridge"
+
+    if systemctl is-active --quiet "$LEGACY_SERVICE_NAME"; then
+        print_info "$(msg 'stopping_service')"
+        systemctl stop "$LEGACY_SERVICE_NAME"
+    fi
+
+    create_user
+    mkdir -p "$INSTALL_DIR" "$CONFIG_DIR"
+    copy_legacy_runtime_files
+    setup_directories
+
+    print_info "$(msg 'installing_lightbridge_service')"
+    install_service
+    disable_legacy_service
+    get_public_ip
+    start_service
+    enable_autostart
+    print_migration_completion "$backup_dir"
 }
 
 # Uninstall function
@@ -1174,6 +1445,17 @@ main() {
             fi
             exit 0
             ;;
+        migrate|migration|migrate-sub2api)
+            check_root
+            detect_platform
+            check_dependencies
+            if [ -n "$target_version" ]; then
+                migrate_sub2api_to_lightbridge "$target_version"
+            else
+                migrate_sub2api_to_lightbridge
+            fi
+            exit 0
+            ;;
         install)
             # Install with optional version
             check_root
@@ -1250,6 +1532,7 @@ main() {
             echo "  $(msg 'cmd_none')            $(msg 'cmd_install')"
             echo "  install              $(msg 'cmd_install')"
             echo "  upgrade              $(msg 'cmd_upgrade')"
+            echo "  migrate              $(msg 'cmd_migrate')"
             echo "  rollback <version>   $(msg 'cmd_install_version')"
             echo "  list-versions        $(msg 'cmd_list_versions')"
             echo "  uninstall            $(msg 'cmd_uninstall')"
@@ -1263,6 +1546,8 @@ main() {
             echo "  $0 install -v v0.1.0      # Install specific version"
             echo "  $0 upgrade                # Upgrade to latest"
             echo "  $0 upgrade -v v0.2.0      # Upgrade to specific version"
+            echo "  $0 migrate                # Migrate Sub2API to LightBridge"
+            echo "  $0 migrate -v v0.0.1      # Migrate to a specific version"
             echo "  $0 rollback v0.1.0        # Rollback to v0.1.0"
             echo "  $0 list-versions          # List available versions"
             echo ""
