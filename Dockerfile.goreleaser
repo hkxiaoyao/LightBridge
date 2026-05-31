@@ -12,9 +12,9 @@ FROM ${POSTGRES_IMAGE} AS pg-client
 
 FROM ${ALPINE_IMAGE}
 
-LABEL maintainer="Wei-Shaw <github.com/Wei-Shaw>"
+LABEL maintainer="GeekMr <github.com/WilliamWang1721>"
 LABEL description="LightBridge - AI API Gateway Platform"
-LABEL org.opencontainers.image.source="https://github.com/Wei-Shaw/LightBridge"
+LABEL org.opencontainers.image.source="https://github.com/WilliamWang1721/LightBridge"
 
 # Install runtime dependencies
 RUN apk add --no-cache \

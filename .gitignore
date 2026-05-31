@@ -136,3 +136,9 @@ docs/*
 frontend/coverage/
 aicodex
 output/
+
+# LightBridge local/build exclusions
+frontend/node_modules/
+frontend/package-lock.json
+frontend/dist/
+backend/internal/web/dist/

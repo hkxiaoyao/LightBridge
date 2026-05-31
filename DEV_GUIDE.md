@@ -6,7 +6,7 @@
 
 | 项目 | 说明 |
 |------|------|
-| **上游仓库** | Wei-Shaw/LightBridge |
+| **上游仓库** | WilliamWang1721/LightBridge |
 | **Fork 仓库** | bayma888/LightBridge-bmai |
 | **技术栈** | Go 后端 (Ent ORM + Gin) + Vue3 前端 (pnpm) |
 | **数据库** | PostgreSQL 16 + Redis |
@@ -340,7 +340,7 @@ LightBridge-bmai/
 
 ## 七、参考资源
 
-- [上游仓库](https://github.com/Wei-Shaw/LightBridge)
+- [上游仓库](https://github.com/WilliamWang1721/LightBridge)
 - [Ent 文档](https://entgo.io/docs/getting-started)
 - [Vue3 文档](https://vuejs.org/)
 - [pnpm 文档](https://pnpm.io/)
