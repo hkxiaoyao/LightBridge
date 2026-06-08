@@ -85,6 +85,8 @@ describe('ProfileInfoCard', () => {
     expect(wrapper.text()).toContain('alice@example.com')
     expect(wrapper.text()).toContain('alice')
     expect(wrapper.text()).toContain('User')
+    const initialAvatar = wrapper.get('.profile-initial-avatar')
+    expect(initialAvatar.text()).toBe('A')
     expect(wrapper.get('[data-testid="profile-basics-panel"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="profile-auth-bindings-panel"]').exists()).toBe(true)
   })

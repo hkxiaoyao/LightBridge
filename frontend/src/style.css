@@ -856,7 +856,7 @@
   .dialog-input,
   .hero-kv-input {
     @apply rounded-none shadow-none;
-    background: var(--lb-bg-surface) !important;
+    background: var(--lb-bg-card) !important;
     border: 1px solid var(--lb-border) !important;
     color: var(--lb-text-main) !important;
     min-height: 42px;
@@ -916,6 +916,53 @@
   .page-description {
     color: var(--lb-text-secondary) !important;
     font-size: 14px;
+  }
+
+  .app-topbar {
+    position: sticky;
+    border: 0 !important;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.9) 68%, rgba(255, 255, 255, 0.72) 100%) !important;
+    box-shadow: none !important;
+  }
+
+  .app-topbar::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -18px;
+    height: 18px;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0));
+  }
+
+  .dark .app-topbar {
+    background:
+      linear-gradient(180deg, rgba(16, 16, 16, 0.98) 0%, rgba(16, 16, 16, 0.9) 68%, rgba(16, 16, 16, 0.72) 100%) !important;
+  }
+
+  .dark .app-topbar::after {
+    background: linear-gradient(180deg, rgba(16, 16, 16, 0.82), rgba(16, 16, 16, 0));
+  }
+
+  .app-topbar-title {
+    color: var(--lb-text-main) !important;
+    font-family: var(--lb-font-display);
+    font-size: 28px;
+    font-weight: 400;
+    line-height: 1.08;
+  }
+
+  .app-topbar-description {
+    color: var(--lb-text-secondary) !important;
+    font-size: 13px;
+    line-height: 1.55;
+    margin-top: 1px;
+  }
+
+  .app-topbar-heading {
+    transform: translateY(10px);
   }
 
   .stat-card {
@@ -998,7 +1045,7 @@
     box-shadow: none !important;
     height: 100dvh;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .sidebar-header {
@@ -1063,8 +1110,8 @@
     font-weight: 400;
   }
 
-  .sidebar-link svg,
-  .sidebar-svg-icon {
+  .sidebar-link:not(.sidebar-link-collapsed) svg,
+  .sidebar-link:not(.sidebar-link-collapsed) .sidebar-svg-icon {
     width: 6px !important;
     height: 6px !important;
     color: transparent !important;
@@ -1077,9 +1124,40 @@
     font-weight: 500;
   }
 
-  .sidebar-link-active svg,
-  .sidebar-link-active .sidebar-svg-icon {
+  .sidebar-link-active:not(.sidebar-link-collapsed) svg,
+  .sidebar-link-active:not(.sidebar-link-collapsed) .sidebar-svg-icon {
     background: var(--lb-red);
+  }
+
+  .sidebar-link-collapsed {
+    justify-content: center;
+    align-items: center;
+    gap: 0 !important;
+    min-height: 44px;
+    overflow: visible !important;
+    padding: 12px 0 !important;
+  }
+
+  .sidebar .sidebar-link.sidebar-link-collapsed svg,
+  .sidebar .sidebar-link.sidebar-link-collapsed .sidebar-svg-icon,
+  .sidebar .sidebar-link.sidebar-link-collapsed .sidebar-svg-icon svg {
+    display: block !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    max-width: 20px !important;
+    max-height: 20px !important;
+    color: var(--lb-text-secondary) !important;
+    background: transparent !important;
+    border-radius: 0;
+    flex-shrink: 0;
+  }
+
+  .sidebar .sidebar-link-active.sidebar-link-collapsed svg,
+  .sidebar .sidebar-link-active.sidebar-link-collapsed .sidebar-svg-icon,
+  .sidebar .sidebar-link-active.sidebar-link-collapsed .sidebar-svg-icon svg {
+    color: var(--lb-text-main) !important;
   }
 
   .sidebar-link:hover {
@@ -1326,6 +1404,17 @@
   .dialog-container div[class*='bg-gray-50'] {
     border: 1px solid var(--lb-border);
     background: var(--lb-bg-surface) !important;
+  }
+
+  .profile-initial-avatar {
+    background: var(--lb-action-bg) !important;
+    color: var(--lb-action-text) !important;
+  }
+
+  .modal-content .account-test-primary-action,
+  [role='dialog'] .account-test-primary-action {
+    background: var(--lb-action-bg) !important;
+    color: var(--lb-action-text) !important;
   }
 
   .driver-popover,

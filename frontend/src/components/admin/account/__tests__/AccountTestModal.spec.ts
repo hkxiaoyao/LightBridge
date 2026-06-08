@@ -128,6 +128,7 @@ describe('AccountTestModal', () => {
     const buttons = wrapper.findAll('button')
     const startButton = buttons.find((button) => button.text().includes('admin.accounts.startTest'))
     expect(startButton).toBeTruthy()
+    expect(startButton!.classes()).toContain('account-test-primary-action')
 
     await startButton!.trigger('click')
     await flushPromises()

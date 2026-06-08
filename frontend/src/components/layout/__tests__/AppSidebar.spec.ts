@@ -22,10 +22,15 @@ describe('AppSidebar custom SVG styles', () => {
 describe('AppSidebar header styles', () => {
   it('does not clip the version badge dropdown', () => {
     const sidebarHeaderBlockMatch = styleSource.match(/\.sidebar-header\s*\{[\s\S]*?\n {2}\}/)
+    const sidebarBlocks = [...styleSource.matchAll(/\.sidebar\s*\{[\s\S]*?\n {2}\}/g)].map(
+      (match) => match[0]
+    )
     const sidebarBrandBlockMatch = componentSource.match(/\.sidebar-brand\s*\{[\s\S]*?\n\}/)
 
     expect(sidebarHeaderBlockMatch).not.toBeNull()
+    expect(sidebarBlocks.length).toBeGreaterThan(0)
     expect(sidebarBrandBlockMatch).not.toBeNull()
+    expect(sidebarBlocks.at(-1)).toContain('overflow: visible;')
     expect(sidebarHeaderBlockMatch?.[0]).not.toContain('@apply overflow-hidden;')
     expect(sidebarBrandBlockMatch?.[0]).not.toContain('overflow: hidden;')
   })

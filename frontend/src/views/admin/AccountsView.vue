@@ -16,25 +16,17 @@
             @refresh="handleManualRefresh"
             @create="showCreate = true"
           >
-            <template #after>
-              <!-- Auto Refresh Dropdown -->
+            <template #refreshMenu>
               <div class="relative" ref="autoRefreshDropdownRef">
                 <button
                   @click="
                     showAutoRefreshDropdown = !showAutoRefreshDropdown;
                     showAccountToolsDropdown = false
                   "
-                  class="btn btn-secondary px-2 md:px-3"
+                  class="btn btn-secondary -ml-px px-2"
                   :title="t('admin.accounts.autoRefresh')"
                 >
-                  <Icon name="refresh" size="sm" :class="[autoRefreshEnabled ? 'animate-spin' : '']" />
-                  <span class="hidden md:inline">
-                    {{
-                      autoRefreshEnabled
-                        ? t('admin.accounts.autoRefreshCountdown', { seconds: autoRefreshCountdown })
-                        : t('admin.accounts.autoRefresh')
-                    }}
-                  </span>
+                  <Icon name="chevronDown" size="xs" :class="{ 'rotate-180': showAutoRefreshDropdown }" />
                 </button>
                 <div
                   v-if="showAutoRefreshDropdown"
@@ -42,10 +34,27 @@
                 >
                   <div class="p-2">
                     <button
+                      @click="
+                        showAutoRefreshDropdown = false;
+                        handleManualRefresh()
+                      "
+                      class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                    >
+                      <Icon name="refresh" size="sm" :class="[loading ? 'animate-spin' : '']" />
+                      <span>{{ t('common.refresh') }}</span>
+                    </button>
+                    <div class="my-1 border-t border-gray-100 dark:border-gray-700"></div>
+                    <button
                       @click="setAutoRefreshEnabled(!autoRefreshEnabled)"
                       class="flex w-full items-center justify-between rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
                     >
-                      <span>{{ t('admin.accounts.enableAutoRefresh') }}</span>
+                      <span>
+                        {{
+                          autoRefreshEnabled
+                            ? t('admin.accounts.autoRefreshCountdown', { seconds: autoRefreshCountdown })
+                            : t('admin.accounts.enableAutoRefresh')
+                        }}
+                      </span>
                       <Icon v-if="autoRefreshEnabled" name="check" size="sm" class="text-primary-500" />
                     </button>
                     <div class="my-1 border-t border-gray-100 dark:border-gray-700"></div>
@@ -61,7 +70,9 @@
                   </div>
                 </div>
               </div>
+            </template>
 
+            <template #after>
               <!-- More Tools Dropdown -->
               <div class="relative" ref="accountToolsDropdownRef">
                 <button

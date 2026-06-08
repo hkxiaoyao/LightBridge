@@ -3,11 +3,11 @@
     <button
       @click="toggleDropdown"
       :disabled="switching"
-      class="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-dark-700"
+      :class="buttonClasses"
       :title="currentLocale?.name"
     >
-      <span class="text-base">{{ currentLocale?.flag }}</span>
-      <span class="hidden sm:inline">{{ currentLocale?.code.toUpperCase() }}</span>
+      <span v-if="variant !== 'sidebar'" class="text-base">{{ currentLocale?.flag }}</span>
+      <span :class="variant === 'sidebar' ? 'truncate' : 'hidden sm:inline'">{{ buttonLabel }}</span>
       <Icon
         name="chevronDown"
         size="xs"
@@ -19,7 +19,7 @@
     <transition name="dropdown">
       <div
         v-if="isOpen"
-        class="absolute right-0 z-50 mt-1 w-32 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-dark-700 dark:bg-dark-800"
+        :class="dropdownClasses"
       >
         <button
           v-for="locale in availableLocales"
@@ -47,6 +47,12 @@ import { useI18n } from 'vue-i18n'
 import Icon from '@/components/icons/Icon.vue'
 import { setLocale, availableLocales } from '@/i18n'
 
+const props = withDefaults(defineProps<{
+  variant?: 'topbar' | 'sidebar'
+}>(), {
+  variant: 'topbar'
+})
+
 const { locale } = useI18n()
 
 const isOpen = ref(false)
@@ -55,6 +61,18 @@ const switching = ref(false)
 
 const currentLocaleCode = computed(() => locale.value)
 const currentLocale = computed(() => availableLocales.find((l) => l.code === locale.value))
+const buttonLabel = computed(() =>
+  props.variant === 'sidebar' ? '语言选择' : currentLocale.value?.code.toUpperCase()
+)
+const buttonClasses = computed(() => [
+  props.variant === 'sidebar'
+    ? 'locale-switcher-sidebar-button'
+    : 'flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-dark-700'
+])
+const dropdownClasses = computed(() => [
+  'absolute z-50 w-32 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-dark-700 dark:bg-dark-800',
+  props.variant === 'sidebar' ? 'bottom-full left-0 mb-2' : 'right-0 mt-1'
+])
 
 function toggleDropdown() {
   isOpen.value = !isOpen.value
@@ -99,5 +117,26 @@ onBeforeUnmount(() => {
 .dropdown-leave-to {
   opacity: 0;
   transform: scale(0.95) translateY(-4px);
+}
+
+.locale-switcher-sidebar-button {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  overflow: hidden;
+  padding: 12px 0;
+  color: var(--lb-text-secondary);
+  font-family: var(--lb-font-display);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.25rem;
+  transition: color 0.2s ease;
+}
+
+.locale-switcher-sidebar-button:hover {
+  color: var(--lb-text-main);
 }
 </style>

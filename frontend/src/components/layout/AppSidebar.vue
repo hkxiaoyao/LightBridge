@@ -16,8 +16,11 @@
         <span class="sidebar-brand-title text-lg font-bold text-gray-900 dark:text-white">
           {{ siteName }}
         </span>
-        <!-- Version Badge -->
-        <VersionBadge :version="siteVersion" />
+        <div class="sidebar-version-row">
+          <!-- Version Badge -->
+          <VersionBadge :version="siteVersion" />
+          <span class="sidebar-version-product">LightBridge</span>
+        </div>
       </div>
     </div>
 
@@ -141,19 +144,51 @@
 
     <!-- Bottom Section -->
     <div class="sidebar-footer mt-auto border-t border-gray-100 p-3 dark:border-dark-800">
-      <!-- Theme Toggle -->
-      <button
-        @click="toggleTheme"
-        class="sidebar-link mb-2 w-full"
-        :class="{ 'sidebar-link-collapsed': sidebarCollapsed }"
-        :title="sidebarCollapsed ? (isDark ? t('nav.lightMode') : t('nav.darkMode')) : undefined"
+      <div
+        v-if="!sidebarCollapsed"
+        class="sidebar-footer-controls"
       >
-        <SunIcon v-if="isDark" class="h-5 w-5 flex-shrink-0 text-amber-500" />
-        <MoonIcon v-else class="h-5 w-5 flex-shrink-0" />
-        <span class="sidebar-label" :class="{ 'sidebar-label-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">{{
-          isDark ? t('nav.lightMode') : t('nav.darkMode')
-        }}</span>
-      </button>
+        <div class="relative" ref="themeDropdownRef">
+          <button
+            @click="toggleThemeDropdown"
+            class="sidebar-link sidebar-footer-action w-full"
+            :class="{ 'sidebar-link-collapsed': sidebarCollapsed }"
+            :title="sidebarCollapsed ? (isDark ? t('nav.lightMode') : t('nav.darkMode')) : undefined"
+          >
+            <SunIcon v-if="isDark" class="h-5 w-5 flex-shrink-0 text-amber-500" />
+            <MoonIcon v-else class="h-5 w-5 flex-shrink-0" />
+            <span class="sidebar-label sidebar-footer-label" :class="{ 'sidebar-label-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">{{
+              isDark ? t('nav.lightMode') : t('nav.darkMode')
+            }}</span>
+          </button>
+
+          <transition name="dropdown">
+            <div
+              v-if="showThemeDropdown"
+              class="theme-dropdown absolute bottom-full left-0 z-50 mb-2 w-32 overflow-hidden border border-gray-200 bg-white shadow-lg dark:border-dark-700 dark:bg-dark-800"
+            >
+              <button
+                type="button"
+                class="theme-dropdown-item"
+                @click="setTheme('light')"
+              >
+                <span>{{ t('nav.lightMode') }}</span>
+                <Icon v-if="!isDark" name="check" size="sm" class="ml-auto text-primary-500" />
+              </button>
+              <button
+                type="button"
+                class="theme-dropdown-item"
+                @click="setTheme('dark')"
+              >
+                <span>{{ t('nav.darkMode') }}</span>
+                <Icon v-if="isDark" name="check" size="sm" class="ml-auto text-primary-500" />
+              </button>
+            </div>
+          </transition>
+        </div>
+
+        <LocaleSwitcher variant="sidebar" />
+      </div>
 
       <!-- Collapse Button -->
       <button
@@ -164,7 +199,7 @@
       >
         <ChevronDoubleLeftIcon v-if="!sidebarCollapsed" class="h-5 w-5 flex-shrink-0" />
         <ChevronDoubleRightIcon v-else class="h-5 w-5 flex-shrink-0" />
-        <span class="sidebar-label" :class="{ 'sidebar-label-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">{{ t('nav.collapse') }}</span>
+        <span class="sidebar-label sidebar-footer-label" :class="{ 'sidebar-label-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">{{ t('nav.collapse') }}</span>
       </button>
     </div>
   </aside>
@@ -180,10 +215,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, ref, watch } from 'vue'
+import { computed, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAdminSettingsStore, useAppStore, useAuthStore, useOnboardingStore } from '@/stores'
+import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import VersionBadge from '@/components/common/VersionBadge.vue'
 import { sanitizeSvg } from '@/utils/sanitize'
 import { FeatureFlags, makeSidebarFlag } from '@/utils/featureFlags'
@@ -237,6 +273,8 @@ const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
 const mobileOpen = computed(() => appStore.mobileOpen)
 const isAdmin = computed(() => authStore.isAdmin)
 const isDark = ref(document.documentElement.classList.contains('dark'))
+const showThemeDropdown = ref(false)
+const themeDropdownRef = ref<HTMLElement | null>(null)
 
 // Track which parent nav groups are expanded
 const expandedGroups = ref<Set<string>>(new Set())
@@ -792,10 +830,21 @@ function toggleSidebar() {
   appStore.toggleSidebar()
 }
 
-function toggleTheme() {
-  isDark.value = !isDark.value
+function setTheme(theme: 'light' | 'dark') {
+  isDark.value = theme === 'dark'
   document.documentElement.classList.toggle('dark', isDark.value)
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
+  localStorage.setItem('theme', theme)
+  showThemeDropdown.value = false
+}
+
+function toggleThemeDropdown() {
+  showThemeDropdown.value = !showThemeDropdown.value
+}
+
+function handleThemeDropdownClickOutside(event: MouseEvent) {
+  if (themeDropdownRef.value && !themeDropdownRef.value.contains(event.target as Node)) {
+    showThemeDropdown.value = false
+  }
 }
 
 function closeMobile() {
@@ -887,9 +936,14 @@ watch(
 )
 
 onMounted(() => {
+  document.addEventListener('click', handleThemeDropdownClickOutside)
   if (isAdmin.value) {
     adminSettingsStore.fetch()
   }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleThemeDropdownClickOutside)
 })
 </script>
 
@@ -931,10 +985,79 @@ onMounted(() => {
   white-space: nowrap;
 }
 
+.sidebar-version-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.sidebar-version-product {
+  color: rgb(107 114 128);
+  font-size: 0.75rem;
+  font-weight: 300;
+  line-height: 1rem;
+}
+
+.dark .sidebar-version-product {
+  color: rgb(156 163 175);
+}
+
+.sidebar-footer-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-footer-controls-collapsed {
+  grid-template-columns: 1fr;
+}
+
+.sidebar-footer-action {
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+.sidebar-footer-label {
+  margin-left: 0.25rem;
+}
+
+.theme-dropdown {
+  border-radius: 0;
+}
+
+.theme-dropdown-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  color: rgb(55 65 81);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  text-align: left;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.theme-dropdown-item:hover {
+  background: rgb(243 244 246);
+}
+
+.dark .theme-dropdown-item {
+  color: rgb(229 231 235);
+}
+
+.dark .theme-dropdown-item:hover {
+  background: rgb(55 65 81);
+}
+
 .sidebar-link-collapsed {
   gap: 0;
-  padding-left: 0.875rem;
-  padding-right: 0.875rem;
+  justify-content: center;
+  overflow: visible;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .sidebar-section-title {

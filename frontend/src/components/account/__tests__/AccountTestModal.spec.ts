@@ -136,6 +136,12 @@ describe('AccountTestModal', () => {
 
     await flushPromises()
     ;(wrapper.vm as any).selectedModelId = 'gpt-5.4'
+
+    const buttons = wrapper.findAll('button')
+    const startButton = buttons.find((button) => button.text().includes('admin.accounts.startTest'))
+    expect(startButton).toBeTruthy()
+    expect(startButton!.classes()).toContain('account-test-primary-action')
+
     ;(wrapper.vm as any).testMode = 'compact'
     await (wrapper.vm as any).startTest()
     await flushPromises()

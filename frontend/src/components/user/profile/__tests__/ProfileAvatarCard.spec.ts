@@ -173,6 +173,8 @@ describe('ProfileAvatarCard', () => {
     })
 
     expect(wrapper.find('[data-testid="profile-avatar-input"]').exists()).toBe(false)
+    const initialAvatar = wrapper.get('.profile-initial-avatar')
+    expect(initialAvatar.text()).toBe('A')
   })
 
   it('compresses an uploaded image that exceeds the 20KB target before saving', async () => {

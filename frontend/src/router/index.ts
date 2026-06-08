@@ -741,11 +741,43 @@ function isBackendModePublicRouteAllowed(path: string, hasPendingAuthSession: bo
   return false
 }
 
+function seedDevPreviewAuth(): void {
+  if (!import.meta.env.DEV) return
+
+  const previewUser = {
+    id: 1,
+    username: 'mrwilliam1721',
+    email: 'mrwilliam1721@gmail.com',
+    role: 'admin',
+    status: 'active',
+    balance: 95910.87,
+    concurrency: 100,
+    avatar_url: '',
+    allowed_groups: null,
+    balance_notify_enabled: true,
+    balance_notify_threshold: null,
+    balance_notify_extra_emails: [],
+    created_at: '2026-03-01T00:00:00Z',
+    updated_at: '2026-06-08T00:00:00Z'
+  }
+
+  localStorage.setItem('auth_token', 'local-preview-token')
+  localStorage.setItem('refresh_token', 'local-preview-refresh')
+  localStorage.setItem('token_expires_at', String(Date.now() + 24 * 60 * 60 * 1000))
+  localStorage.setItem('auth_user', JSON.stringify(previewUser))
+}
+
 router.beforeEach(async (to, _from, next) => {
   // 开始导航加载状态
   navigationLoading.startNavigation()
 
   const authStore = useAuthStore()
+
+  if (import.meta.env.DEV && to.query.__preview === '1') {
+    seedDevPreviewAuth()
+    authStore.checkAuth()
+    authInitialized = true
+  }
 
   // Restore auth state from localStorage on first navigation (page refresh)
   if (!authInitialized) {
