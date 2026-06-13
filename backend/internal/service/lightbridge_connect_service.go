@@ -150,8 +150,14 @@ func (s *LightBridgeConnectService) VerifyNewAPIToken(ctx context.Context, insta
 		Timeout: 10 * time.Second,
 	}
 
-	// Normalize URL: strip trailing slashes
+	// Normalize URL: strip trailing slashes and /v1 /v2 path prefixes
 	baseURL := strings.TrimRight(instanceURL, "/")
+	for _, suffix := range []string{"/v1", "/v2"} {
+		if strings.HasSuffix(baseURL, suffix) {
+			baseURL = baseURL[:len(baseURL)-len(suffix)]
+			break
+		}
+	}
 
 	req, err := http.NewRequestWithContext(ctx, "GET", baseURL+"/api/user/self", nil)
 	if err != nil {
