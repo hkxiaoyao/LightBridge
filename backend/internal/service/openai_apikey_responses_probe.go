@@ -101,8 +101,12 @@ func (s *AccountTestService) ProbeOpenAIAPIKeyResponsesSupport(ctx context.Conte
 	req.Header.Set("Accept", "application/json")
 
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	if !account.IsCustomBaseURLEnabled() || account.GetCustomBaseURL() == "" {
+		proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, nil)
+		if err != nil {
+			logger.LegacyPrintf("service.openai_probe", "probe_proxy_resolve_failed: account_id=%d err=%v", accountID, err)
+			return
+		}
 	}
 
 	resp, err := s.httpUpstream.DoWithTLS(req, proxyURL, account.ID, account.Concurrency, s.tlsFPProfileService.ResolveTLSProfile(account))

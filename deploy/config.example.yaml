@@ -67,6 +67,16 @@ server:
 run_mode: "standard"
 
 # =============================================================================
+# Language Configuration
+# 语言配置
+# =============================================================================
+# Default language for API error messages returned to clients: "en" or "zh".
+# 返回给 API 客户端的错误信息的默认语言："en"（英文）或 "zh"（中文）。
+# A request's Accept-Language header (e.g. "zh-CN") overrides this per request.
+# 单个请求的 Accept-Language 请求头（如 "zh-CN"）会按请求覆盖该默认值。
+language: "en"
+
+# =============================================================================
 # CORS Configuration
 # 跨域资源共享 (CORS) 配置
 # =============================================================================
@@ -1014,6 +1024,13 @@ modules:
   # Timeout in seconds for fetching the registry and module packages.
   # 拉取索引和模块包的超时时间（秒）。
   marketplace_timeout_seconds: 20
+  proxy:
+    # Optional path to a local mihomo binary used by LightBridge Proxy profile runtimes.
+    # LightBridge Proxy Profile 运行时使用的本地 mihomo 二进制路径。
+    mihomo_binary_path: ""
+    # Optional runtime workdir root. Defaults to <data_dir>/modules/lightbridge.proxy/runtime.
+    # 可选运行目录根路径；默认使用 <data_dir>/modules/lightbridge.proxy/runtime。
+    runtime_dir: ""
 
 # =============================================================================
 # Billing Configuration

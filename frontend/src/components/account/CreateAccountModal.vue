@@ -114,7 +114,7 @@
             @click="form.platform = 'gemini'"
             :class="[
               'flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-all',
-              form.platform === 'gemini'
+              (form.platform === 'gemini' || form.platform === 'antigravity')
                 ? 'bg-white text-blue-600 shadow-sm dark:bg-dark-600 dark:text-blue-400'
                 : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
             ]"
@@ -134,18 +134,64 @@
             </svg>
             Gemini
           </button>
+        </div>
+      </div>
+
+      <!-- Gemini 家族接入方式：原生 Gemini 或 Antigravity（Antigravity 现为 Gemini 平台下的一种账号类型） -->
+      <div v-if="form.platform === 'gemini' || form.platform === 'antigravity'">
+        <label class="input-label">{{ t('admin.accounts.gemini.providerLabel') }}</label>
+        <div class="mt-2 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            @click="form.platform = 'gemini'"
+            :class="[
+              'flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-all',
+              form.platform === 'gemini'
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                : 'border-gray-200 hover:border-blue-300 dark:border-dark-600 dark:hover:border-blue-700'
+            ]"
+          >
+            <div
+              :class="[
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                form.platform === 'gemini'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-500 dark:bg-dark-600 dark:text-gray-400'
+              ]"
+            >
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5L12 2z" />
+              </svg>
+            </div>
+            <div>
+              <span class="block text-sm font-medium text-gray-900 dark:text-white">{{ t('admin.accounts.gemini.providerGemini') }}</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.accounts.gemini.providerGeminiDesc') }}</span>
+            </div>
+          </button>
           <button
             type="button"
             @click="form.platform = 'antigravity'"
             :class="[
-              'flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-all',
+              'flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-all',
               form.platform === 'antigravity'
-                ? 'bg-white text-purple-600 shadow-sm dark:bg-dark-600 dark:text-purple-400'
-                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+                ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                : 'border-gray-200 hover:border-purple-300 dark:border-dark-600 dark:hover:border-purple-700'
             ]"
           >
-            <Icon name="cloud" size="sm" />
-            Antigravity
+            <div
+              :class="[
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                form.platform === 'antigravity'
+                  ? 'bg-purple-500 text-white'
+                  : 'bg-gray-100 text-gray-500 dark:bg-dark-600 dark:text-gray-400'
+              ]"
+            >
+              <Icon name="cloud" size="sm" />
+            </div>
+            <div>
+              <span class="block text-sm font-medium text-gray-900 dark:text-white">{{ t('admin.accounts.gemini.providerAntigravity') }}</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.accounts.gemini.providerAntigravityDesc') }}</span>
+            </div>
           </button>
         </div>
       </div>

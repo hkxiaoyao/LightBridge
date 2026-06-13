@@ -2986,11 +2986,10 @@ export default {
       dataExportFailed: 'Failed to export data',
       dataImportTitle: 'Import Data',
       dataImportHint: 'Upload the exported JSON file to import accounts and proxies.',
-      dataImportWarning: 'Import will create new accounts/proxies; groups must be bound manually. Ensure existing data does not conflict.',
       dataImportFile: 'Data file',
       dataImportSelectedFiles: '{count} files selected',
       dataImportGroups: 'Import groups',
-      dataImportGroupsHint: 'Leave empty to use the platform default group; selected groups bind imported accounts to those OpenAI groups.',
+      dataImportGroupsHint: 'Leave empty to use each platform default group; selected groups bind imported accounts to those groups.',
       dataImportBatchSettings: 'Override imported account settings',
       dataImportRateMultiplier: 'Rate multiplier',
       dataImportAutoPause: 'Auto pause when expired',
@@ -2999,8 +2998,10 @@ export default {
       dataImportZipEncrypted: 'Encrypted ZIP files are not supported',
       dataImportZipUnsupportedCompression: 'This browser does not support the ZIP compression method',
       dataImportURL: 'Download URL',
-      dataImportURLPlaceholder: 'https://example.com/accounts.zip',
-      dataImportURLHint: 'Paste a direct JSON/TXT/ZIP download link. The server downloads it and imports it with the same rules.',
+      dataImportURLPlaceholder: 'https://example.com/accounts-1.zip\nhttps://example.com/accounts-2.json',
+      dataImportURLHint: 'Paste direct JSON/TXT/ZIP download links, one per line. The server downloads them and imports them with the same rules.',
+      dataImportProgress: 'Import progress',
+      dataImportProgressIdle: 'Waiting to import',
       dataImportCompatibilityMode: 'Compatibility mode',
       dataImportCompatibilityModeHint: 'For non-standard JSON/TXT files. The system extracts refresh_token, access_token, id_token, session_token, email, account IDs, and imports them as OpenAI OAuth accounts.',
       dataImportButton: 'Start Import',
@@ -3837,6 +3838,11 @@ export default {
                   }
                 },      // Gemini specific (platform-wide)
       gemini: {
+        providerLabel: 'Access Type',
+        providerGemini: 'Gemini',
+        providerGeminiDesc: 'Official Gemini (CLI/OAuth, API Key, Vertex service account)',
+        providerAntigravity: 'Antigravity',
+        providerAntigravityDesc: 'Antigravity account type under the Gemini platform',
         helpButton: 'Help',
         helpDialog: {
           title: 'Gemini Usage Guide',

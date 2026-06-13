@@ -2,6 +2,10 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -9,35 +13,132 @@ import (
 )
 
 type moduleServiceMemoryStore struct {
-	items []modules.InstalledModule
+	items        []modules.InstalledModule
+	permissions  map[string][]modules.PermissionRecord
+	statusCalls  []moduleStatusCall
+	approveCalls []string
 }
 
-func (s moduleServiceMemoryStore) ListInstalled(context.Context) ([]modules.InstalledModule, error) {
+type moduleStatusCall struct {
+	id     string
+	status modules.ModuleStatus
+	errMsg string
+}
+
+func (s *moduleServiceMemoryStore) ListInstalled(context.Context) ([]modules.InstalledModule, error) {
 	return append([]modules.InstalledModule(nil), s.items...), nil
 }
 
-func (s moduleServiceMemoryStore) GetInstalled(context.Context, string) (*modules.InstalledModule, error) {
-	panic("not implemented")
+func (s *moduleServiceMemoryStore) GetInstalled(_ context.Context, id string) (*modules.InstalledModule, error) {
+	for idx := range s.items {
+		if s.items[idx].ID == id {
+			item := s.items[idx]
+			return &item, nil
+		}
+	}
+	return nil, errors.New("not found")
 }
 
-func (s moduleServiceMemoryStore) SaveInstalled(context.Context, modules.InstalledModule) error {
-	panic("not implemented")
+func (s *moduleServiceMemoryStore) SaveInstalled(_ context.Context, module modules.InstalledModule) error {
+	for idx := range s.items {
+		if s.items[idx].ID == module.ID {
+			s.items[idx] = module
+			return nil
+		}
+	}
+	s.items = append(s.items, module)
+	return nil
 }
 
-func (s moduleServiceMemoryStore) SavePermissions(context.Context, string, []modules.PermissionRecord) error {
-	panic("not implemented")
+func (s *moduleServiceMemoryStore) SavePermissions(_ context.Context, moduleID string, permissions []modules.PermissionRecord) error {
+	if s.permissions == nil {
+		s.permissions = map[string][]modules.PermissionRecord{}
+	}
+	s.permissions[moduleID] = append([]modules.PermissionRecord(nil), permissions...)
+	return nil
 }
 
-func (s moduleServiceMemoryStore) ListPermissions(context.Context, string) ([]modules.PermissionRecord, error) {
-	panic("not implemented")
+func (s *moduleServiceMemoryStore) ListPermissions(_ context.Context, moduleID string) ([]modules.PermissionRecord, error) {
+	return append([]modules.PermissionRecord(nil), s.permissions[moduleID]...), nil
 }
 
-func (s moduleServiceMemoryStore) ApprovePermissions(context.Context, string) error {
-	panic("not implemented")
+func (s *moduleServiceMemoryStore) ApprovePermissions(_ context.Context, moduleID string) error {
+	s.approveCalls = append(s.approveCalls, moduleID)
+	for idx := range s.permissions[moduleID] {
+		s.permissions[moduleID][idx].Approved = true
+		now := time.Now().UTC()
+		s.permissions[moduleID][idx].ApprovedAt = &now
+	}
+	return nil
 }
 
-func (s moduleServiceMemoryStore) SetStatus(context.Context, string, modules.ModuleStatus, string) error {
-	panic("not implemented")
+func (s *moduleServiceMemoryStore) SetStatus(_ context.Context, id string, status modules.ModuleStatus, errMsg string) error {
+	s.statusCalls = append(s.statusCalls, moduleStatusCall{id: id, status: status, errMsg: errMsg})
+	for idx := range s.items {
+		if s.items[idx].ID == id {
+			s.items[idx].Status = status
+			s.items[idx].LastError = errMsg
+		}
+	}
+	return nil
+}
+
+type fakeOutboundRuntime struct {
+	started []string
+	stopped []string
+}
+
+func (r *fakeOutboundRuntime) StartOutbound(_ context.Context, module modules.InstalledModule) error {
+	r.started = append(r.started, module.ID)
+	return nil
+}
+
+func (r *fakeOutboundRuntime) StopOutbound(_ context.Context, id string) error {
+	r.stopped = append(r.stopped, id)
+	return nil
+}
+
+type passthroughModuleVerifier struct{}
+
+func (passthroughModuleVerifier) VerifyInstalled(_ context.Context, module modules.InstalledModule) (*modules.InstalledModule, error) {
+	return &module, nil
+}
+
+type fakeMarketplaceInstaller struct {
+	store     modules.Store
+	archive   map[string]modules.InstalledModule
+	installed []string
+}
+
+func (i *fakeMarketplaceInstaller) InstallArchive(ctx context.Context, archivePath string) (*modules.InstalledModule, error) {
+	if i.archive == nil {
+		return nil, errors.New("archive map is not configured")
+	}
+	name := filepath.Base(archivePath)
+	module, ok := i.archive[name]
+	if !ok {
+		return nil, fmt.Errorf("unexpected archive %s", name)
+	}
+	module.Status = modules.ModuleStatusInstalled
+	if module.Manifest.ID == "" {
+		module.Manifest.ID = module.ID
+	}
+	if module.Manifest.Version == "" {
+		module.Manifest.Version = module.Version
+	}
+	if module.Manifest.Type == "" {
+		module.Manifest.Type = module.Type
+	}
+	i.installed = append(i.installed, module.ID)
+	if i.store != nil {
+		if err := i.store.SaveInstalled(ctx, module); err != nil {
+			return nil, err
+		}
+		if err := i.store.SavePermissions(ctx, module.ID, nil); err != nil {
+			return nil, err
+		}
+	}
+	return &module, nil
 }
 
 func TestDecodeMarketplaceRegistryPreservesLocalizedModuleText(t *testing.T) {
@@ -75,9 +176,134 @@ func TestDecodeMarketplaceRegistryPreservesLocalizedModuleText(t *testing.T) {
 	}
 }
 
+func TestMarketplaceHidesManagedProviderModules(t *testing.T) {
+	registryPath := writeModuleMarketplaceRegistry(t, `{
+		"modules": [{
+			"id": "openai",
+			"version": "0.1.1",
+			"type": "provider",
+			"name": "OpenAI OAuth Provider",
+			"downloadUrl": "file:///tmp/lightbridge-module-openai-0.1.1.tar.zst",
+			"core": ">=0.1.0 <0.2.0",
+			"capabilities": ["provider.adapter"]
+		}, {
+			"id": "anthropic-oauth",
+			"version": "0.1.0",
+			"type": "provider",
+			"name": "Anthropic OAuth Provider",
+			"downloadUrl": "file:///tmp/lightbridge-module-anthropic-oauth-0.1.0.tar.zst",
+			"core": ">=0.1.0 <0.2.0",
+			"capabilities": ["provider.adapter"]
+		}, {
+			"id": "gemini",
+			"version": "0.1.0",
+			"type": "provider",
+			"name": "Gemini OAuth Provider",
+			"downloadUrl": "file:///tmp/lightbridge-module-gemini-0.1.0.tar.zst",
+			"core": ">=0.1.0 <0.2.0",
+			"capabilities": ["provider.adapter"]
+		}, {
+			"id": "lightbridge.proxy",
+			"version": "0.1.0",
+			"type": "outbound",
+			"name": "LightBridge Proxy",
+			"downloadUrl": "file:///tmp/lightbridge-module-proxy-0.1.0.tar.zst",
+			"core": ">=0.1.0 <0.2.0",
+			"capabilities": ["outbound.adapter"]
+		}]
+	}`)
+	svc := NewModuleService(&moduleServiceMemoryStore{})
+	svc.marketplaceRegistryPath = registryPath
+
+	result, err := svc.Marketplace(context.Background())
+	if err != nil {
+		t.Fatalf("load marketplace: %v", err)
+	}
+	if len(result.Modules) != 1 {
+		t.Fatalf("expected only non-provider module to remain visible, got %#v", result.Modules)
+	}
+	if got := result.Modules[0].ID; got != "lightbridge.proxy" {
+		t.Fatalf("expected proxy module to remain visible, got %q", got)
+	}
+}
+
+func TestAutoInstallManagedProviderModulesInstallsHiddenProviders(t *testing.T) {
+	dir := t.TempDir()
+	openAIArchive := writeModuleArchivePlaceholder(t, dir, "lightbridge-module-openai-0.1.1.tar.zst")
+	anthropicArchive := writeModuleArchivePlaceholder(t, dir, "lightbridge-module-anthropic-oauth-0.1.0.tar.zst")
+	proxyArchive := writeModuleArchivePlaceholder(t, dir, "lightbridge-module-proxy-0.1.0.tar.zst")
+	registryPath := writeModuleMarketplaceRegistry(t, fmt.Sprintf(`{
+		"modules": [{
+			"id": "openai",
+			"version": "0.1.1",
+			"type": "provider",
+			"name": "OpenAI OAuth Provider",
+			"downloadUrl": %q,
+			"core": ">=0.1.0 <0.2.0",
+			"capabilities": ["provider.adapter"]
+		}, {
+			"id": "anthropic-oauth",
+			"version": "0.1.0",
+			"type": "provider",
+			"name": "Anthropic OAuth Provider",
+			"downloadUrl": %q,
+			"core": ">=0.1.0 <0.2.0",
+			"capabilities": ["provider.adapter"]
+		}, {
+			"id": "lightbridge.proxy",
+			"version": "0.1.0",
+			"type": "outbound",
+			"name": "LightBridge Proxy",
+			"downloadUrl": %q,
+			"core": ">=0.1.0 <0.2.0",
+			"capabilities": ["outbound.adapter"]
+		}]
+	}`, openAIArchive, anthropicArchive, proxyArchive))
+	store := &moduleServiceMemoryStore{}
+	installer := &fakeMarketplaceInstaller{
+		store: store,
+		archive: map[string]modules.InstalledModule{
+			"lightbridge-module-openai-0.1.1.tar.zst": {
+				ID:      "openai",
+				Name:    "OpenAI OAuth Provider",
+				Type:    modules.ModuleTypeProvider,
+				Version: "0.1.1",
+			},
+			"lightbridge-module-anthropic-oauth-0.1.0.tar.zst": {
+				ID:      "anthropic-oauth",
+				Name:    "Anthropic OAuth Provider",
+				Type:    modules.ModuleTypeProvider,
+				Version: "0.1.0",
+			},
+		},
+	}
+	svc := NewModuleService(store)
+	svc.installer = installer
+	svc.marketplaceRegistryPath = registryPath
+
+	if err := svc.AutoInstallManagedProviderModules(context.Background()); err != nil {
+		t.Fatalf("auto install managed provider modules: %v", err)
+	}
+	if len(installer.installed) != 2 {
+		t.Fatalf("expected two provider installs, got %#v", installer.installed)
+	}
+	if _, ok := store.permissions["lightbridge.proxy"]; ok {
+		t.Fatalf("proxy module should not be auto-installed")
+	}
+	for _, id := range []string{"anthropic-oauth", "openai"} {
+		item, err := store.GetInstalled(context.Background(), id)
+		if err != nil {
+			t.Fatalf("expected %s to be installed: %v", id, err)
+		}
+		if item.Status != modules.ModuleStatusEnabled {
+			t.Fatalf("expected %s to be enabled, got %s", id, item.Status)
+		}
+	}
+}
+
 func TestUIManifestIncludesLocalizedRouteMenuAndAccountFormText(t *testing.T) {
 	now := time.Now()
-	svc := NewModuleService(moduleServiceMemoryStore{items: []modules.InstalledModule{{
+	store := &moduleServiceMemoryStore{items: []modules.InstalledModule{{
 		ID:      "anthropic-oauth",
 		Name:    "Anthropic OAuth Provider",
 		Type:    modules.ModuleTypeProvider,
@@ -112,7 +338,8 @@ func TestUIManifestIncludesLocalizedRouteMenuAndAccountFormText(t *testing.T) {
 			},
 		},
 		InstalledAt: now,
-	}}})
+	}}}
+	svc := NewModuleService(store)
 
 	items, err := svc.UIManifest(context.Background())
 	if err != nil {
@@ -133,4 +360,63 @@ func TestUIManifestIncludesLocalizedRouteMenuAndAccountFormText(t *testing.T) {
 	if got := items[0].AccountForms[0].ProviderNameI18n["zh-CN"]; got != "Anthropic OAuth 提供商" {
 		t.Fatalf("expected localized account form provider name, got %q", got)
 	}
+}
+
+func TestStartEnabledModulesStartsOutboundModules(t *testing.T) {
+	store := &moduleServiceMemoryStore{items: []modules.InstalledModule{{
+		ID:      "lightbridge.proxy",
+		Name:    "LightBridge Proxy",
+		Type:    modules.ModuleTypeOutbound,
+		Version: "0.1.0",
+		Status:  modules.ModuleStatusEnabled,
+	}}}
+	runtime := &fakeOutboundRuntime{}
+	svc := NewModuleService(store)
+	svc.moduleVerifier = passthroughModuleVerifier{}
+	svc.SetOutboundRuntime(runtime)
+
+	if err := svc.StartEnabledModules(context.Background()); err != nil {
+		t.Fatalf("start enabled modules: %v", err)
+	}
+	if len(runtime.started) != 1 || runtime.started[0] != "lightbridge.proxy" {
+		t.Fatalf("expected outbound runtime to start lightbridge.proxy, got %#v", runtime.started)
+	}
+}
+
+func TestDisableStopsOutboundRuntime(t *testing.T) {
+	store := &moduleServiceMemoryStore{items: []modules.InstalledModule{{
+		ID:      "lightbridge.proxy",
+		Name:    "LightBridge Proxy",
+		Type:    modules.ModuleTypeOutbound,
+		Version: "0.1.0",
+		Status:  modules.ModuleStatusEnabled,
+	}}}
+	runtime := &fakeOutboundRuntime{}
+	svc := NewModuleService(store)
+	svc.SetOutboundRuntime(runtime)
+
+	if _, err := svc.Disable(context.Background(), "lightbridge.proxy"); err != nil {
+		t.Fatalf("disable module: %v", err)
+	}
+	if len(runtime.stopped) != 1 || runtime.stopped[0] != "lightbridge.proxy" {
+		t.Fatalf("expected outbound runtime to stop lightbridge.proxy, got %#v", runtime.stopped)
+	}
+}
+
+func writeModuleMarketplaceRegistry(t *testing.T, content string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "registry.json")
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("write registry: %v", err)
+	}
+	return path
+}
+
+func writeModuleArchivePlaceholder(t *testing.T, dir string, name string) string {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte("placeholder"), 0o600); err != nil {
+		t.Fatalf("write archive placeholder: %v", err)
+	}
+	return "file://" + path
 }

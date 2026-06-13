@@ -48,7 +48,7 @@ func (h *GatewayHandler) ChatCompletions(c *gin.Context) {
 	body, err := pkghttputil.ReadRequestBodyWithPrealloc(c.Request)
 	if err != nil {
 		if maxErr, ok := extractMaxBytesError(err); ok {
-			h.chatCompletionsErrorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(maxErr.Limit))
+			h.chatCompletionsErrorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(c, maxErr.Limit))
 			return
 		}
 		h.chatCompletionsErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to read request body")
@@ -181,7 +181,7 @@ func (h *GatewayHandler) ChatCompletions(c *gin.Context) {
 		if err != nil {
 			if len(fs.FailedAccountIDs) == 0 {
 				markOpsRoutingCapacityLimitedIfNoAvailable(c, err)
-				h.chatCompletionsErrorResponse(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error())
+				h.chatCompletionsErrorResponse(c, http.StatusServiceUnavailable, "api_error", localizef(c, "No available accounts: %s", err.Error()))
 				return
 			}
 			action := fs.HandleSelectionExhausted(c.Request.Context())
@@ -241,7 +241,7 @@ func (h *GatewayHandler) ChatCompletions(c *gin.Context) {
 			forwardBody = h.gatewayService.ReplaceModelInBody(body, channelMapping.MappedModel)
 		}
 		var result *service.ForwardResult
-		if account.Platform == service.PlatformGemini {
+		if account.IsPureGemini() {
 			if h.geminiCompatService == nil {
 				h.chatCompletionsErrorResponse(c, http.StatusBadGateway, "upstream_error", "Gemini compatibility service is not configured")
 				if accountReleaseFunc != nil {
@@ -265,7 +265,7 @@ func (h *GatewayHandler) ChatCompletions(c *gin.Context) {
 					h.handleCCFailoverExhausted(c, failoverErr, true)
 					return
 				}
-				action := fs.HandleFailoverError(c.Request.Context(), h.gatewayService, account.ID, account.Platform, failoverErr)
+				action := fs.HandleFailoverError(c.Request.Context(), h.gatewayService, account.ID, account.EffectivePlatform(), failoverErr)
 				switch action {
 				case FailoverContinue:
 					continue
@@ -289,7 +289,7 @@ func (h *GatewayHandler) ChatCompletions(c *gin.Context) {
 		clientIP := ip.GetClientIP(c)
 		requestPayloadHash := service.HashUsageRequestPayload(body)
 		inboundEndpoint := GetInboundEndpoint(c)
-		upstreamEndpoint := GetUpstreamEndpoint(c, account.Platform)
+		upstreamEndpoint := GetUpstreamEndpoint(c, account.EffectivePlatform())
 
 		quotaPlatform := service.QuotaPlatform(c.Request.Context(), apiKey)
 		h.submitUsageRecordTask(c.Request.Context(), func(ctx context.Context) {
@@ -323,7 +323,7 @@ func (h *GatewayHandler) chatCompletionsErrorResponse(c *gin.Context, status int
 	c.JSON(status, gin.H{
 		"error": gin.H{
 			"type":    errType,
-			"message": message,
+			"message": localizeMessage(c, message),
 		},
 	})
 }

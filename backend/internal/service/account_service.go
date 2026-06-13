@@ -149,11 +149,15 @@ func (s *AccountService) Create(ctx context.Context, req CreateAccountRequest) (
 		}
 	}
 
+	// 归一化平台别名（"antigravity" → gemini + sub_platform），与 admin_service.CreateAccount 一致。
+	normalizedPlatform, subPlatform := NormalizePlatform(req.Platform)
+
 	// 创建账号
 	account := &Account{
 		Name:        req.Name,
 		Notes:       normalizeAccountNotes(req.Notes),
-		Platform:    req.Platform,
+		Platform:    normalizedPlatform,
+		SubPlatform: subPlatform,
 		Type:        req.Type,
 		Credentials: req.Credentials,
 		Extra:       req.Extra,

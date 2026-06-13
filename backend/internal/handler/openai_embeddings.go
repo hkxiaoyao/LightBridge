@@ -49,7 +49,7 @@ func (h *OpenAIGatewayHandler) Embeddings(c *gin.Context) {
 	body, err := pkghttputil.ReadRequestBodyWithPrealloc(c.Request)
 	if err != nil {
 		if maxErr, ok := extractMaxBytesError(err); ok {
-			h.errorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(maxErr.Limit))
+			h.errorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(c, maxErr.Limit))
 			return
 		}
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to read request body")
@@ -212,7 +212,7 @@ func (h *OpenAIGatewayHandler) Embeddings(c *gin.Context) {
 		userAgent := c.GetHeader("User-Agent")
 		clientIP := ip.GetClientIP(c)
 		inboundEndpoint := GetInboundEndpoint(c)
-		upstreamEndpoint := GetUpstreamEndpoint(c, account.Platform)
+		upstreamEndpoint := GetUpstreamEndpoint(c, account.EffectivePlatform())
 
 		h.submitOpenAIUsageRecordTask(c.Request.Context(), result, func(ctx context.Context) {
 			if err := h.gatewayService.RecordUsage(ctx, &service.OpenAIRecordUsageInput{

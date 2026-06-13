@@ -278,15 +278,18 @@ func (s *OpenAIGatewayService) ForwardAsAnthropic(
 
 	// 7. Send request
 	proxyURL := ""
-	if account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	if !account.IsCustomBaseURLEnabled() || account.GetCustomBaseURL() == "" {
+		proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, apiKeyGroupID(getAPIKeyFromContext(c)))
+		if err != nil {
+			return nil, err
+		}
 	}
 	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
 	if err != nil {
 		safeErr := sanitizeUpstreamErrorMessage(err.Error())
 		setOpsUpstreamError(c, 0, safeErr, "")
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
+			Platform:           account.EffectivePlatform(),
 			AccountID:          account.ID,
 			AccountName:        account.Name,
 			UpstreamStatusCode: 0,
@@ -329,7 +332,7 @@ func (s *OpenAIGatewayService) ForwardAsAnthropic(
 				upstreamDetail = truncateString(string(respBody), maxBytes)
 			}
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: resp.StatusCode,

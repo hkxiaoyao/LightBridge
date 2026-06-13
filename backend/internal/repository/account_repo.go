@@ -86,6 +86,7 @@ func (r *accountRepository) Create(ctx context.Context, account *service.Account
 		SetNillableNotes(account.Notes).
 		SetPlatform(account.Platform).
 		SetType(account.Type).
+		SetSubPlatform(account.SubPlatform).
 		SetCredentials(normalizeJSONMap(account.Credentials)).
 		SetExtra(normalizeJSONMap(account.Extra)).
 		SetConcurrency(account.Concurrency).
@@ -327,6 +328,7 @@ func (r *accountRepository) Update(ctx context.Context, account *service.Account
 		SetNillableNotes(account.Notes).
 		SetPlatform(account.Platform).
 		SetType(account.Type).
+		SetSubPlatform(account.SubPlatform).
 		SetCredentials(normalizeJSONMap(account.Credentials)).
 		SetExtra(normalizeJSONMap(account.Extra)).
 		SetConcurrency(account.Concurrency).
@@ -1747,6 +1749,7 @@ func accountEntityToService(m *dbent.Account) *service.Account {
 		Name:                    m.Name,
 		Notes:                   m.Notes,
 		Platform:                m.Platform,
+		SubPlatform:             m.SubPlatform,
 		Type:                    m.Type,
 		Credentials:             copyJSONMap(m.Credentials),
 		Extra:                   copyJSONMap(m.Extra),

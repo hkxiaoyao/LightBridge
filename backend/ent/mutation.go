@@ -2284,6 +2284,7 @@ type AccountMutation struct {
 	notes                     *string
 	platform                  *string
 	_type                     *string
+	sub_platform              *string
 	credentials               *map[string]interface{}
 	extra                     *map[string]interface{}
 	concurrency               *int
@@ -2696,6 +2697,42 @@ func (m *AccountMutation) OldType(ctx context.Context) (v string, err error) {
 // ResetType resets all changes to the "type" field.
 func (m *AccountMutation) ResetType() {
 	m._type = nil
+}
+
+// SetSubPlatform sets the "sub_platform" field.
+func (m *AccountMutation) SetSubPlatform(s string) {
+	m.sub_platform = &s
+}
+
+// SubPlatform returns the value of the "sub_platform" field in the mutation.
+func (m *AccountMutation) SubPlatform() (r string, exists bool) {
+	v := m.sub_platform
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubPlatform returns the old "sub_platform" field's value of the Account entity.
+// If the Account object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountMutation) OldSubPlatform(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubPlatform is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubPlatform requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubPlatform: %w", err)
+	}
+	return oldValue.SubPlatform, nil
+}
+
+// ResetSubPlatform resets all changes to the "sub_platform" field.
+func (m *AccountMutation) ResetSubPlatform() {
+	m.sub_platform = nil
 }
 
 // SetCredentials sets the "credentials" field.
@@ -3873,7 +3910,7 @@ func (m *AccountMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AccountMutation) Fields() []string {
-	fields := make([]string, 0, 28)
+	fields := make([]string, 0, 29)
 	if m.created_at != nil {
 		fields = append(fields, account.FieldCreatedAt)
 	}
@@ -3894,6 +3931,9 @@ func (m *AccountMutation) Fields() []string {
 	}
 	if m._type != nil {
 		fields = append(fields, account.FieldType)
+	}
+	if m.sub_platform != nil {
+		fields = append(fields, account.FieldSubPlatform)
 	}
 	if m.credentials != nil {
 		fields = append(fields, account.FieldCredentials)
@@ -3980,6 +4020,8 @@ func (m *AccountMutation) Field(name string) (ent.Value, bool) {
 		return m.Platform()
 	case account.FieldType:
 		return m.GetType()
+	case account.FieldSubPlatform:
+		return m.SubPlatform()
 	case account.FieldCredentials:
 		return m.Credentials()
 	case account.FieldExtra:
@@ -4045,6 +4087,8 @@ func (m *AccountMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldPlatform(ctx)
 	case account.FieldType:
 		return m.OldType(ctx)
+	case account.FieldSubPlatform:
+		return m.OldSubPlatform(ctx)
 	case account.FieldCredentials:
 		return m.OldCredentials(ctx)
 	case account.FieldExtra:
@@ -4144,6 +4188,13 @@ func (m *AccountMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetType(v)
+		return nil
+	case account.FieldSubPlatform:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubPlatform(v)
 		return nil
 	case account.FieldCredentials:
 		v, ok := value.(map[string]interface{})
@@ -4505,6 +4556,9 @@ func (m *AccountMutation) ResetField(name string) error {
 		return nil
 	case account.FieldType:
 		m.ResetType()
+		return nil
+	case account.FieldSubPlatform:
+		m.ResetSubPlatform()
 		return nil
 	case account.FieldCredentials:
 		m.ResetCredentials()

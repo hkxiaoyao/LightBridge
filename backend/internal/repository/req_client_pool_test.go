@@ -7,6 +7,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/Wei-Shaw/LightBridge/internal/outbound"
 	"github.com/imroc/req/v3"
 	"github.com/stretchr/testify/require"
 )
@@ -81,6 +82,46 @@ func TestGetSharedReqClient_ImpersonateAndProxy(t *testing.T) {
 
 	require.NotNil(t, client)
 	require.Equal(t, "http://proxy.local:8080|4s|true|false", buildReqClientKey(opts))
+}
+
+func TestGetSharedReqClient_ResolvedOutboundSeparatesCacheByProfile(t *testing.T) {
+	sharedReqClients = sync.Map{}
+	base := reqClientOptions{
+		ProxyURL: "http://legacy.proxy:8080",
+		ResolvedOutbound: &outbound.ResolvedOutbound{
+			Mode:      "proxy",
+			ProxyURL:  "http://127.0.0.1:7890",
+			AdapterID: "lightbridge.proxy",
+			ProfileID: 1,
+		},
+		Timeout: time.Second,
+	}
+	first, err := getSharedReqClient(base)
+	require.NoError(t, err)
+
+	other := base
+	other.ResolvedOutbound = &outbound.ResolvedOutbound{
+		Mode:      "proxy",
+		ProxyURL:  "http://127.0.0.1:7890",
+		AdapterID: "lightbridge.proxy",
+		ProfileID: 2,
+	}
+	second, err := getSharedReqClient(other)
+	require.NoError(t, err)
+
+	require.NotSame(t, first, second)
+	require.NotEqual(t, buildReqClientKey(base), buildReqClientKey(other))
+}
+
+func TestGetSharedReqClient_ResolvedDirectOverridesLegacyProxy(t *testing.T) {
+	sharedReqClients = sync.Map{}
+	client, err := getSharedReqClient(reqClientOptions{
+		ProxyURL:         "://invalid-legacy-proxy",
+		ResolvedOutbound: &outbound.ResolvedOutbound{Mode: "direct"},
+		Timeout:          time.Second,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, client)
 }
 
 func TestGetSharedReqClient_InvalidProxyURL(t *testing.T) {

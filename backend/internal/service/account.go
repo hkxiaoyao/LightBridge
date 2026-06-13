@@ -21,6 +21,10 @@ type Account struct {
 	Name        string
 	Notes       *string
 	Platform    string
+	// SubPlatform 是同一 platform 下的子平台/账号变体判别符。
+	// 目前用于在 "gemini" 平台下标识 Antigravity 账号（SubPlatform=="antigravity"）。
+	// 空字符串表示原生平台账号。与 Type 正交。使用 IsAntigravity() 读取。
+	SubPlatform string
 	Type        string
 	Credentials map[string]any
 	Extra       map[string]any
@@ -159,11 +163,12 @@ func (a *Account) IsOAuth() bool {
 // Antigravity: privacy_mode == "privacy_set"
 // 其他平台: 无 privacy 概念，始终返回 true
 func (a *Account) IsPrivacySet() bool {
+	if a.IsAntigravity() {
+		return a.getExtraString("privacy_mode") == AntigravityPrivacySet
+	}
 	switch a.Platform {
 	case PlatformOpenAI:
 		return a.getExtraString("privacy_mode") == PrivacyModeTrainingOff
-	case PlatformAntigravity:
-		return a.getExtraString("privacy_mode") == AntigravityPrivacySet
 	default:
 		return true
 	}
@@ -173,8 +178,35 @@ func (a *Account) IsGemini() bool {
 	return a.Platform == PlatformGemini
 }
 
+// IsAntigravity 报告该账号是否为 Antigravity 账号。
+// 合并后 Antigravity 账号的 Platform=="gemini"，通过 SubPlatform=="antigravity" 判别，
+// 与 Type（oauth/apikey/upstream）正交。这是判断 Antigravity 身份的唯一权威方式。
+//
+// 为兼容尚未迁移的历史数据/外部构造对象，同时容忍旧的 Platform=="antigravity" 取值
+// （归一化逻辑会在写入时将其转换为 gemini + sub_platform，但内存对象可能仍带旧值）。
+func (a *Account) IsAntigravity() bool {
+	return a.SubPlatform == SubPlatformAntigravity || a.Platform == PlatformAntigravity
+}
+
+// IsPureGemini 报告该账号是否为原生 Gemini 账号（platform==gemini 且非 Antigravity）。
+// 用于那些只应作用于原生 Gemini、而不应作用于 Antigravity 的逻辑
+// （如 Code Assist、AI Studio、Gemini 专属模型映射等）。
+func (a *Account) IsPureGemini() bool {
+	return a.Platform == PlatformGemini && !a.IsAntigravity()
+}
+
+// EffectivePlatform 返回账号对外暴露的平台标识（别名）。
+// Antigravity 账号在数据库中 Platform=="gemini"，但对外（配额归因、展示、
+// 向后兼容路由）仍呈现为 "antigravity"。其他账号返回其真实 Platform。
+func (a *Account) EffectivePlatform() string {
+	if a.IsAntigravity() {
+		return PlatformAntigravity
+	}
+	return a.Platform
+}
+
 func (a *Account) GeminiOAuthType() string {
-	if a.Platform != PlatformGemini || a.Type != AccountTypeOAuth {
+	if !a.IsPureGemini() || a.Type != AccountTypeOAuth {
 		return ""
 	}
 	oauthType := strings.TrimSpace(a.GetCredential("oauth_type"))
@@ -190,7 +222,7 @@ func (a *Account) GeminiTierID() string {
 }
 
 func (a *Account) IsGeminiCodeAssist() bool {
-	if a.Platform != PlatformGemini || a.Type != AccountTypeOAuth {
+	if !a.IsPureGemini() || a.Type != AccountTypeOAuth {
 		return false
 	}
 	oauthType := a.GeminiOAuthType()
@@ -488,7 +520,7 @@ func (a *Account) GetModelMapping() map[string]string {
 func (a *Account) resolveModelMapping(rawMapping map[string]any) map[string]string {
 	if a.Credentials == nil {
 		// Antigravity 平台使用默认映射
-		if a.Platform == domain.PlatformAntigravity {
+		if a.IsAntigravity() {
 			return domain.DefaultAntigravityModelMapping
 		}
 		// Bedrock 默认映射由 forwardBedrock 统一处理（需配合 region prefix 调整）
@@ -496,7 +528,7 @@ func (a *Account) resolveModelMapping(rawMapping map[string]any) map[string]stri
 	}
 	if len(rawMapping) == 0 {
 		// Antigravity 平台使用默认映射
-		if a.Platform == domain.PlatformAntigravity {
+		if a.IsAntigravity() {
 			return domain.DefaultAntigravityModelMapping
 		}
 		return nil
@@ -509,7 +541,7 @@ func (a *Account) resolveModelMapping(rawMapping map[string]any) map[string]stri
 		}
 	}
 	if len(result) > 0 {
-		if a.Platform == domain.PlatformAntigravity {
+		if a.IsAntigravity() {
 			ensureAntigravityDefaultPassthroughs(result, []string{
 				"gemini-3-flash",
 				"gemini-3.1-pro-high",
@@ -520,7 +552,7 @@ func (a *Account) resolveModelMapping(rawMapping map[string]any) map[string]stri
 	}
 
 	// Antigravity 平台使用默认映射
-	if a.Platform == domain.PlatformAntigravity {
+	if a.IsAntigravity() {
 		return domain.DefaultAntigravityModelMapping
 	}
 	return nil
@@ -736,7 +768,7 @@ func (a *Account) GetBaseURL() string {
 	if baseURL == "" {
 		return "https://api.anthropic.com"
 	}
-	if a.Platform == PlatformAntigravity {
+	if a.IsAntigravity() {
 		return strings.TrimRight(baseURL, "/") + "/antigravity"
 	}
 	return baseURL
@@ -749,7 +781,7 @@ func (a *Account) GetGeminiBaseURL(defaultBaseURL string) string {
 	if baseURL == "" {
 		return defaultBaseURL
 	}
-	if a.Platform == PlatformAntigravity && a.Type == AccountTypeAPIKey {
+	if a.IsAntigravity() && a.Type == AccountTypeAPIKey {
 		return strings.TrimRight(baseURL, "/") + "/antigravity"
 	}
 	return baseURL
@@ -1249,7 +1281,7 @@ func (a *Account) IsOpenAITokenExpired() bool {
 // IsMixedSchedulingEnabled 检查 antigravity 账户是否启用混合调度
 // 启用后可参与 anthropic/gemini 分组的账户调度
 func (a *Account) IsMixedSchedulingEnabled() bool {
-	if a.Platform != PlatformAntigravity {
+	if !a.IsAntigravity() {
 		return false
 	}
 	if a.Extra == nil {
@@ -1265,7 +1297,7 @@ func (a *Account) IsMixedSchedulingEnabled() bool {
 
 // IsOveragesEnabled 检查 Antigravity 账号是否启用 AI Credits 超量请求。
 func (a *Account) IsOveragesEnabled() bool {
-	if a.Platform != PlatformAntigravity {
+	if !a.IsAntigravity() {
 		return false
 	}
 	if a.Extra == nil {

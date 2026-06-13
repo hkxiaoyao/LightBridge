@@ -52,7 +52,7 @@ func (h *OpenAIGatewayHandler) ChatCompletions(c *gin.Context) {
 	body, err := pkghttputil.ReadRequestBodyWithPrealloc(c.Request)
 	if err != nil {
 		if maxErr, ok := extractMaxBytesError(err); ok {
-			h.errorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(maxErr.Limit))
+			h.errorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(c, maxErr.Limit))
 			return
 		}
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to read request body")
@@ -316,5 +316,5 @@ func resolveRawCCUpstreamEndpoint(c *gin.Context, account *service.Account) stri
 		!openai_compat.ShouldUseResponsesAPI(account.Extra) {
 		return "/v1/chat/completions"
 	}
-	return GetUpstreamEndpoint(c, account.Platform)
+	return GetUpstreamEndpoint(c, account.EffectivePlatform())
 }

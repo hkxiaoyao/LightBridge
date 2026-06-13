@@ -43,6 +43,18 @@ const (
 	PlatformAntigravity = domain.PlatformAntigravity
 )
 
+// Sub-platform constants（accounts.sub_platform 取值）。
+const (
+	// SubPlatformAntigravity 标识 gemini 平台下的 Antigravity 账号。
+	SubPlatformAntigravity = domain.SubPlatformAntigravity
+)
+
+// NormalizePlatform 将平台别名归一化为内部 (platform, subPlatform)。
+// "antigravity" → ("gemini", "antigravity")；其余原样返回。详见 domain.NormalizePlatform。
+func NormalizePlatform(platform string) (string, string) {
+	return domain.NormalizePlatform(platform)
+}
+
 // AllowedQuotaPlatforms 是允许设置 user × platform quota 的平台列表（单一权威来源）。
 // ent/schema/user_platform_quota.go 的 Validate 函数独立维护（构建期约束），
 // 若新增平台需同步修改该 schema。

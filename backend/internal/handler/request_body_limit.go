@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 func extractMaxBytesError(err error) (*http.MaxBytesError, bool) {
@@ -22,6 +24,6 @@ func formatBodyLimit(limit int64) string {
 	return fmt.Sprintf("%dB", limit)
 }
 
-func buildBodyTooLargeMessage(limit int64) string {
-	return fmt.Sprintf("Request body too large, limit is %s", formatBodyLimit(limit))
+func buildBodyTooLargeMessage(c *gin.Context, limit int64) string {
+	return localizef(c, "Request body too large, limit is %s", formatBodyLimit(limit))
 }

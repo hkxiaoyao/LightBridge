@@ -18,11 +18,37 @@ const (
 
 // Platform constants
 const (
-	PlatformAnthropic   = "anthropic"
-	PlatformOpenAI      = "openai"
-	PlatformGemini      = "gemini"
+	PlatformAnthropic = "anthropic"
+	PlatformOpenAI    = "openai"
+	PlatformGemini    = "gemini"
+	// PlatformAntigravity 历史上是一个独立平台值。自 Gemini/Antigravity 合并后，
+	// Antigravity 账号在数据库中以 platform="gemini" + sub_platform="antigravity" 存储，
+	// 该常量不再作为 accounts.platform 的取值，而是继续承担两个角色：
+	//   1. accounts.sub_platform 的取值（见 SubPlatformAntigravity，二者同值）；
+	//   2. 向后兼容的“平台别名”——分组 platform、强制平台中间件、API 入参、
+	//      配额归因等仍可使用 "antigravity"，由归一化逻辑映射到 gemini+sub_platform。
 	PlatformAntigravity = "antigravity"
 )
+
+// Sub-platform constants —— 同一 platform 下的账号变体判别符（accounts.sub_platform）。
+const (
+	// SubPlatformAntigravity 标识 gemini 平台下的 Antigravity 账号。
+	// 与 PlatformAntigravity 同值（"antigravity"），便于别名与子平台互转。
+	SubPlatformAntigravity = PlatformAntigravity
+)
+
+// NormalizePlatform 将外部输入或历史存储的 platform 别名归一化为内部使用的
+// (platform, subPlatform) 二元组。兼容旧的 "antigravity" 平台值：
+// 返回 ("gemini", "antigravity")。其他平台原样返回，subPlatform 为空。
+//
+// 写入账户（创建/编辑/导入/OAuth）时应统一经过此函数，确保 Antigravity 账号
+// 始终以 platform="gemini" + sub_platform="antigravity" 落库。
+func NormalizePlatform(platform string) (normalizedPlatform, subPlatform string) {
+	if platform == PlatformAntigravity {
+		return PlatformGemini, SubPlatformAntigravity
+	}
+	return platform, ""
+}
 
 // Account type constants
 const (

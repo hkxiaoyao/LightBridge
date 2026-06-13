@@ -140,6 +140,12 @@ func convertCPAImportPayload(raw json.RawMessage) (DataPayload, bool, error) {
 }
 
 func looksLikeCPAImportPayload(probe map[string]json.RawMessage) bool {
+	if rawType, ok := probe["type"]; ok {
+		switch strings.ToLower(strings.TrimSpace(cpaStringFromRawJSON(rawType))) {
+		case "codex":
+			return hasAnyCPAAuthField(probe, "access_token", "accessToken", "id_token", "idToken", "refresh_token", "refreshToken", "session_token", "sessionToken")
+		}
+	}
 	if _, ok := probe["account_id"]; ok {
 		if _, hasAccessToken := probe["access_token"]; hasAccessToken {
 			return true
@@ -153,6 +159,15 @@ func looksLikeCPAImportPayload(probe map[string]json.RawMessage) bool {
 			return true
 		}
 		if _, hasAccessToken := probe["access_token"]; hasAccessToken {
+			return true
+		}
+	}
+	return false
+}
+
+func hasAnyCPAAuthField(probe map[string]json.RawMessage, fields ...string) bool {
+	for _, field := range fields {
+		if raw, ok := probe[field]; ok && strings.TrimSpace(cpaStringFromRawJSON(raw)) != "" {
 			return true
 		}
 	}

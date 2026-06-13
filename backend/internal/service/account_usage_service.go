@@ -311,7 +311,8 @@ func (s *AccountUsageService) GetUsage(ctx context.Context, accountID int64, for
 		return usage, err
 	}
 
-	if account.Platform == PlatformGemini {
+	// 仅原生 Gemini 走 Gemini usage；Antigravity 在下方分支用自己的 fetcher。
+	if account.IsPureGemini() {
 		usage, err := s.getGeminiUsage(ctx, account)
 		if err == nil {
 			s.tryClearRecoverableAccountError(ctx, account)
@@ -320,7 +321,7 @@ func (s *AccountUsageService) GetUsage(ctx context.Context, accountID int64, for
 	}
 
 	// Antigravity 平台：使用 AntigravityQuotaFetcher 获取额度
-	if account.Platform == PlatformAntigravity {
+	if account.IsAntigravity() {
 		usage, err := s.getAntigravityUsage(ctx, account)
 		if err == nil {
 			s.tryClearRecoverableAccountError(ctx, account)

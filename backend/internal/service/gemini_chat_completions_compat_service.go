@@ -95,8 +95,9 @@ func (s *GeminiMessagesCompatService) forwardClaudeBodyAsChatCompletions(
 	geminiReq = ensureGeminiFunctionCallThoughtSignatures(geminiReq)
 
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, apiKeyGroupID(getAPIKeyFromContext(c)))
+	if err != nil {
+		return nil, err
 	}
 
 	useUpstreamStream := clientStream
@@ -127,7 +128,7 @@ func (s *GeminiMessagesCompatService) forwardClaudeBodyAsChatCompletions(
 		if err != nil {
 			safeErr := sanitizeUpstreamErrorMessage(err.Error())
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: 0,
@@ -172,7 +173,7 @@ func (s *GeminiMessagesCompatService) forwardClaudeBodyAsChatCompletions(
 				upstreamMsg := strings.TrimSpace(extractUpstreamErrorMessage(respBody))
 				upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -214,7 +215,7 @@ func (s *GeminiMessagesCompatService) forwardClaudeBodyAsChatCompletions(
 		if s.shouldFailoverGeminiUpstreamError(resp.StatusCode) {
 			upstreamMsg := sanitizeUpstreamErrorMessage(strings.TrimSpace(extractUpstreamErrorMessage(evBody)))
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: resp.StatusCode,
@@ -795,7 +796,7 @@ func (s *GeminiMessagesCompatService) writeGeminiChatCompletionsMappedError(
 	setOpsUpstreamError(c, upstreamStatus, upstreamMsg, "")
 	if account != nil {
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
+			Platform:           account.EffectivePlatform(),
 			AccountID:          account.ID,
 			AccountName:        account.Name,
 			UpstreamStatusCode: upstreamStatus,

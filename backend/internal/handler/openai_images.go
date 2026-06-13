@@ -51,7 +51,7 @@ func (h *OpenAIGatewayHandler) Images(c *gin.Context) {
 	body, err := pkghttputil.ReadRequestBodyWithPrealloc(c.Request)
 	if err != nil {
 		if maxErr, ok := extractMaxBytesError(err); ok {
-			h.errorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(maxErr.Limit))
+			h.errorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(c, maxErr.Limit))
 			return
 		}
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to read request body")
@@ -305,7 +305,7 @@ func (h *OpenAIGatewayHandler) Images(c *gin.Context) {
 			requestPayloadHash = service.HashUsageRequestPayload([]byte(parsed.StickySessionSeed()))
 		}
 		inboundEndpoint := GetInboundEndpoint(c)
-		upstreamEndpoint := GetUpstreamEndpoint(c, account.Platform)
+		upstreamEndpoint := GetUpstreamEndpoint(c, account.EffectivePlatform())
 
 		upstreamModel := ""
 		if result != nil {

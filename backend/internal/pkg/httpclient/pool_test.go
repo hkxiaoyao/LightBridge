@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Wei-Shaw/LightBridge/internal/outbound"
 	"github.com/stretchr/testify/require"
 )
 
@@ -112,4 +113,35 @@ func TestValidatedTransport_ValidationErrorStopsRoundTrip(t *testing.T) {
 	_, err = transport.RoundTrip(req)
 	require.ErrorIs(t, err, expectedErr)
 	require.Equal(t, int32(0), atomic.LoadInt32(&baseCalls))
+}
+
+func TestClientProxyKey_ResolvedOutboundSeparatesProfiles(t *testing.T) {
+	base := Options{
+		ProxyURL: "http://legacy.proxy:8080",
+		ResolvedOutbound: &outbound.ResolvedOutbound{
+			Mode:      "proxy",
+			ProxyURL:  "http://127.0.0.1:7890",
+			AdapterID: "lightbridge.proxy",
+			ProfileID: 1,
+		},
+	}
+	other := base
+	other.ResolvedOutbound = &outbound.ResolvedOutbound{
+		Mode:      "proxy",
+		ProxyURL:  "http://127.0.0.1:7890",
+		AdapterID: "lightbridge.proxy",
+		ProfileID: 2,
+	}
+
+	require.NotEqual(t, buildClientKey(base), buildClientKey(other))
+	require.Contains(t, buildClientKey(base), "lightbridge.proxy:1")
+}
+
+func TestBuildTransport_ResolvedDirectOverridesLegacyProxy(t *testing.T) {
+	transport, err := buildTransport(Options{
+		ProxyURL:         "://invalid-legacy-proxy",
+		ResolvedOutbound: &outbound.ResolvedOutbound{Mode: "direct"},
+	})
+	require.NoError(t, err)
+	require.Nil(t, transport.Proxy)
 }

@@ -119,6 +119,20 @@ func (_u *AccountUpdate) SetNillableType(v *string) *AccountUpdate {
 	return _u
 }
 
+// SetSubPlatform sets the "sub_platform" field.
+func (_u *AccountUpdate) SetSubPlatform(v string) *AccountUpdate {
+	_u.mutation.SetSubPlatform(v)
+	return _u
+}
+
+// SetNillableSubPlatform sets the "sub_platform" field if the given value is not nil.
+func (_u *AccountUpdate) SetNillableSubPlatform(v *string) *AccountUpdate {
+	if v != nil {
+		_u.SetSubPlatform(*v)
+	}
+	return _u
+}
+
 // SetCredentials sets the "credentials" field.
 func (_u *AccountUpdate) SetCredentials(v map[string]interface{}) *AccountUpdate {
 	_u.mutation.SetCredentials(v)
@@ -650,6 +664,11 @@ func (_u *AccountUpdate) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Account.type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.SubPlatform(); ok {
+		if err := account.SubPlatformValidator(v); err != nil {
+			return &ValidationError{Name: "sub_platform", err: fmt.Errorf(`ent: validator failed for field "Account.sub_platform": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := account.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Account.status": %w`, err)}
@@ -698,6 +717,9 @@ func (_u *AccountUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.GetType(); ok {
 		_spec.SetField(account.FieldType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.SubPlatform(); ok {
+		_spec.SetField(account.FieldSubPlatform, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Credentials(); ok {
 		_spec.SetField(account.FieldCredentials, field.TypeJSON, value)
@@ -1042,6 +1064,20 @@ func (_u *AccountUpdateOne) SetType(v string) *AccountUpdateOne {
 func (_u *AccountUpdateOne) SetNillableType(v *string) *AccountUpdateOne {
 	if v != nil {
 		_u.SetType(*v)
+	}
+	return _u
+}
+
+// SetSubPlatform sets the "sub_platform" field.
+func (_u *AccountUpdateOne) SetSubPlatform(v string) *AccountUpdateOne {
+	_u.mutation.SetSubPlatform(v)
+	return _u
+}
+
+// SetNillableSubPlatform sets the "sub_platform" field if the given value is not nil.
+func (_u *AccountUpdateOne) SetNillableSubPlatform(v *string) *AccountUpdateOne {
+	if v != nil {
+		_u.SetSubPlatform(*v)
 	}
 	return _u
 }
@@ -1590,6 +1626,11 @@ func (_u *AccountUpdateOne) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Account.type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.SubPlatform(); ok {
+		if err := account.SubPlatformValidator(v); err != nil {
+			return &ValidationError{Name: "sub_platform", err: fmt.Errorf(`ent: validator failed for field "Account.sub_platform": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := account.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Account.status": %w`, err)}
@@ -1655,6 +1696,9 @@ func (_u *AccountUpdateOne) sqlSave(ctx context.Context) (_node *Account, err er
 	}
 	if value, ok := _u.mutation.GetType(); ok {
 		_spec.SetField(account.FieldType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.SubPlatform(); ok {
+		_spec.SetField(account.FieldSubPlatform, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Credentials(); ok {
 		_spec.SetField(account.FieldCredentials, field.TypeJSON, value)

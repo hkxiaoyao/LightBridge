@@ -14,7 +14,10 @@ const ManifestAPIVersionV1Alpha1 = "lightbridge/v1alpha1"
 
 type ModuleType string
 
-const ModuleTypeProvider ModuleType = "provider"
+const (
+	ModuleTypeProvider ModuleType = "provider"
+	ModuleTypeOutbound ModuleType = "outbound"
+)
 
 type ModuleStatus string
 
@@ -31,8 +34,11 @@ type Capability string
 
 const (
 	CapabilityProviderAdapter Capability = "provider.adapter"
+	CapabilityOutboundAdapter Capability = "outbound.adapter"
 	CapabilityUIAdminRoute    Capability = "ui.admin.route"
 	CapabilityUIAccountForm   Capability = "ui.account.form"
+	CapabilityUIEntityPanel   Capability = "ui.entity.panel"
+	CapabilityEntityBinding   Capability = "entity.binding"
 )
 
 type PermissionSet map[string][]string
@@ -191,6 +197,11 @@ type ProviderRuntime interface {
 	StopProvider(context.Context, string) error
 }
 
+type OutboundRuntime interface {
+	StartOutbound(context.Context, InstalledModule) error
+	StopOutbound(context.Context, string) error
+}
+
 type ProviderRegistry struct {
 	mu       sync.RWMutex
 	adapters map[string]ProviderAdapter
@@ -241,7 +252,12 @@ func (r *ProviderRegistry) IDs() []string {
 }
 func IsAllowedCapability(c Capability) bool {
 	switch c {
-	case CapabilityProviderAdapter, CapabilityUIAdminRoute, CapabilityUIAccountForm:
+	case CapabilityProviderAdapter,
+		CapabilityOutboundAdapter,
+		CapabilityUIAdminRoute,
+		CapabilityUIAccountForm,
+		CapabilityUIEntityPanel,
+		CapabilityEntityBinding:
 		return true
 	default:
 		return false
@@ -260,6 +276,11 @@ func ValidateManifest(m Manifest) error {
 	if m.Type == "" {
 		return errors.New("type is required")
 	}
+	switch m.Type {
+	case ModuleTypeProvider, ModuleTypeOutbound:
+	default:
+		return fmt.Errorf("unsupported module type %q", m.Type)
+	}
 	for _, c := range m.Capabilities {
 		if !IsAllowedCapability(c) {
 			return fmt.Errorf("unsupported capability %q", c)
@@ -267,6 +288,9 @@ func ValidateManifest(m Manifest) error {
 	}
 	if hasCapability(m, CapabilityProviderAdapter) && m.Backend == nil {
 		return errors.New("provider.adapter requires backend spec")
+	}
+	if hasCapability(m, CapabilityOutboundAdapter) && m.Backend == nil {
+		return errors.New("outbound.adapter requires backend spec")
 	}
 	return nil
 }

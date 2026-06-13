@@ -144,7 +144,7 @@ func (h *OpenAIGatewayHandler) Responses(c *gin.Context) {
 	body, err := pkghttputil.ReadRequestBodyWithPrealloc(c.Request)
 	if err != nil {
 		if maxErr, ok := extractMaxBytesError(err); ok {
-			h.errorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(maxErr.Limit))
+			h.errorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(c, maxErr.Limit))
 			return
 		}
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to read request body")
@@ -461,7 +461,7 @@ func (h *OpenAIGatewayHandler) Responses(c *gin.Context) {
 		clientIP := ip.GetClientIP(c)
 		requestPayloadHash := service.HashUsageRequestPayload(body)
 		inboundEndpoint := GetInboundEndpoint(c)
-		upstreamEndpoint := GetUpstreamEndpoint(c, account.Platform)
+		upstreamEndpoint := GetUpstreamEndpoint(c, account.EffectivePlatform())
 
 		// 使用量记录通过有界 worker 池提交，避免请求热路径创建无界 goroutine。
 		h.submitOpenAIUsageRecordTask(c.Request.Context(), result, func(ctx context.Context) {
@@ -618,7 +618,7 @@ func (h *OpenAIGatewayHandler) Messages(c *gin.Context) {
 	body, err := pkghttputil.ReadRequestBodyWithPrealloc(c.Request)
 	if err != nil {
 		if maxErr, ok := extractMaxBytesError(err); ok {
-			h.anthropicErrorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(maxErr.Limit))
+			h.anthropicErrorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(c, maxErr.Limit))
 			return
 		}
 		h.anthropicErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to read request body")
@@ -847,7 +847,7 @@ func (h *OpenAIGatewayHandler) Messages(c *gin.Context) {
 		clientIP := ip.GetClientIP(c)
 		requestPayloadHash := service.HashUsageRequestPayload(body)
 		inboundEndpoint := GetInboundEndpoint(c)
-		upstreamEndpoint := GetUpstreamEndpoint(c, account.Platform)
+		upstreamEndpoint := GetUpstreamEndpoint(c, account.EffectivePlatform())
 
 		h.submitOpenAIUsageRecordTask(c.Request.Context(), result, func(ctx context.Context) {
 			if err := h.gatewayService.RecordUsage(ctx, &service.OpenAIRecordUsageInput{
@@ -902,7 +902,7 @@ func (h *OpenAIGatewayHandler) anthropicErrorResponse(c *gin.Context, status int
 		"type": "error",
 		"error": gin.H{
 			"type":    errType,
-			"message": message,
+			"message": localizeMessage(c, message),
 		},
 	})
 }
@@ -910,6 +910,8 @@ func (h *OpenAIGatewayHandler) anthropicErrorResponse(c *gin.Context, status int
 // anthropicStreamingAwareError handles errors that may occur during streaming,
 // using Anthropic SSE error format.
 func (h *OpenAIGatewayHandler) anthropicStreamingAwareError(c *gin.Context, status int, errType, message string, streamStarted bool) {
+	// Localize once; both the SSE and JSON branches below emit this message.
+	message = localizeMessage(c, message)
 	if streamStarted {
 		flusher, ok := c.Writer.(http.Flusher)
 		if ok {
@@ -1452,7 +1454,7 @@ func (h *OpenAIGatewayHandler) ResponsesWebSocket(c *gin.Context) {
 				}
 				h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, true, result.FirstTokenMs)
 				inboundEndpoint := GetInboundEndpoint(c)
-				upstreamEndpoint := GetUpstreamEndpoint(c, account.Platform)
+				upstreamEndpoint := GetUpstreamEndpoint(c, account.EffectivePlatform())
 				h.submitOpenAIUsageRecordTask(ctx, result, func(taskCtx context.Context) {
 					if err := h.gatewayService.RecordUsage(taskCtx, &service.OpenAIRecordUsageInput{
 						Result:             result,
@@ -1718,7 +1720,7 @@ func (h *OpenAIGatewayHandler) acquireImageGenerationSlot(c *gin.Context, stream
 
 // handleConcurrencyError handles concurrency-related acquire errors.
 func (h *OpenAIGatewayHandler) handleConcurrencyError(c *gin.Context, err error, slotType string, streamStarted bool) {
-	status, errType, message := concurrencyErrorResponse(err, slotType)
+	status, errType, message := concurrencyErrorResponse(c, err, slotType)
 	h.handleStreamingAwareError(c, status, errType, message, streamStarted)
 }
 
@@ -1790,6 +1792,8 @@ func (h *OpenAIGatewayHandler) mapUpstreamError(statusCode int) (int, string, st
 
 // handleStreamingAwareError handles errors that may occur after streaming has started
 func (h *OpenAIGatewayHandler) handleStreamingAwareError(c *gin.Context, status int, errType, message string, streamStarted bool) {
+	// Localize once; both the SSE and JSON branches below emit this message.
+	message = localizeMessage(c, message)
 	if streamStarted {
 		// /v1/responses 的严格 SDK（Codex CLI）要求终止事件必须属于
 		// response.completed/failed/incomplete/cancelled 集合。
@@ -1849,7 +1853,7 @@ func (h *OpenAIGatewayHandler) errorResponse(c *gin.Context, status int, errType
 	c.JSON(status, gin.H{
 		"error": gin.H{
 			"type":    errType,
-			"message": message,
+			"message": localizeMessage(c, message),
 		},
 	})
 }

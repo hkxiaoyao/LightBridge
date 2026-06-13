@@ -99,6 +99,20 @@ func (_c *AccountCreate) SetType(v string) *AccountCreate {
 	return _c
 }
 
+// SetSubPlatform sets the "sub_platform" field.
+func (_c *AccountCreate) SetSubPlatform(v string) *AccountCreate {
+	_c.mutation.SetSubPlatform(v)
+	return _c
+}
+
+// SetNillableSubPlatform sets the "sub_platform" field if the given value is not nil.
+func (_c *AccountCreate) SetNillableSubPlatform(v *string) *AccountCreate {
+	if v != nil {
+		_c.SetSubPlatform(*v)
+	}
+	return _c
+}
+
 // SetCredentials sets the "credentials" field.
 func (_c *AccountCreate) SetCredentials(v map[string]interface{}) *AccountCreate {
 	_c.mutation.SetCredentials(v)
@@ -463,6 +477,10 @@ func (_c *AccountCreate) defaults() error {
 		v := account.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := _c.mutation.SubPlatform(); !ok {
+		v := account.DefaultSubPlatform
+		_c.mutation.SetSubPlatform(v)
+	}
 	if _, ok := _c.mutation.Credentials(); !ok {
 		if account.DefaultCredentials == nil {
 			return fmt.Errorf("ent: uninitialized account.DefaultCredentials (forgotten import ent/runtime?)")
@@ -534,6 +552,14 @@ func (_c *AccountCreate) check() error {
 	if v, ok := _c.mutation.GetType(); ok {
 		if err := account.TypeValidator(v); err != nil {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Account.type": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.SubPlatform(); !ok {
+		return &ValidationError{Name: "sub_platform", err: errors.New(`ent: missing required field "Account.sub_platform"`)}
+	}
+	if v, ok := _c.mutation.SubPlatform(); ok {
+		if err := account.SubPlatformValidator(v); err != nil {
+			return &ValidationError{Name: "sub_platform", err: fmt.Errorf(`ent: validator failed for field "Account.sub_platform": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.Credentials(); !ok {
@@ -624,6 +650,10 @@ func (_c *AccountCreate) createSpec() (*Account, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.GetType(); ok {
 		_spec.SetField(account.FieldType, field.TypeString, value)
 		_node.Type = value
+	}
+	if value, ok := _c.mutation.SubPlatform(); ok {
+		_spec.SetField(account.FieldSubPlatform, field.TypeString, value)
+		_node.SubPlatform = value
 	}
 	if value, ok := _c.mutation.Credentials(); ok {
 		_spec.SetField(account.FieldCredentials, field.TypeJSON, value)
@@ -891,6 +921,18 @@ func (u *AccountUpsert) SetType(v string) *AccountUpsert {
 // UpdateType sets the "type" field to the value that was provided on create.
 func (u *AccountUpsert) UpdateType() *AccountUpsert {
 	u.SetExcluded(account.FieldType)
+	return u
+}
+
+// SetSubPlatform sets the "sub_platform" field.
+func (u *AccountUpsert) SetSubPlatform(v string) *AccountUpsert {
+	u.Set(account.FieldSubPlatform, v)
+	return u
+}
+
+// UpdateSubPlatform sets the "sub_platform" field to the value that was provided on create.
+func (u *AccountUpsert) UpdateSubPlatform() *AccountUpsert {
+	u.SetExcluded(account.FieldSubPlatform)
 	return u
 }
 
@@ -1388,6 +1430,20 @@ func (u *AccountUpsertOne) SetType(v string) *AccountUpsertOne {
 func (u *AccountUpsertOne) UpdateType() *AccountUpsertOne {
 	return u.Update(func(s *AccountUpsert) {
 		s.UpdateType()
+	})
+}
+
+// SetSubPlatform sets the "sub_platform" field.
+func (u *AccountUpsertOne) SetSubPlatform(v string) *AccountUpsertOne {
+	return u.Update(func(s *AccountUpsert) {
+		s.SetSubPlatform(v)
+	})
+}
+
+// UpdateSubPlatform sets the "sub_platform" field to the value that was provided on create.
+func (u *AccountUpsertOne) UpdateSubPlatform() *AccountUpsertOne {
+	return u.Update(func(s *AccountUpsert) {
+		s.UpdateSubPlatform()
 	})
 }
 
@@ -2110,6 +2166,20 @@ func (u *AccountUpsertBulk) SetType(v string) *AccountUpsertBulk {
 func (u *AccountUpsertBulk) UpdateType() *AccountUpsertBulk {
 	return u.Update(func(s *AccountUpsert) {
 		s.UpdateType()
+	})
+}
+
+// SetSubPlatform sets the "sub_platform" field.
+func (u *AccountUpsertBulk) SetSubPlatform(v string) *AccountUpsertBulk {
+	return u.Update(func(s *AccountUpsert) {
+		s.SetSubPlatform(v)
+	})
+}
+
+// UpdateSubPlatform sets the "sub_platform" field to the value that was provided on create.
+func (u *AccountUpsertBulk) UpdateSubPlatform() *AccountUpsertBulk {
+	return u.Update(func(s *AccountUpsert) {
+		s.UpdateSubPlatform()
 	})
 }
 

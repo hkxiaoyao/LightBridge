@@ -19,6 +19,7 @@ import (
 
 	"github.com/Wei-Shaw/LightBridge/internal/config"
 	"github.com/Wei-Shaw/LightBridge/internal/modules"
+	"github.com/Wei-Shaw/LightBridge/internal/outbound"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/claude"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/geminicli"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/openai"
@@ -72,6 +73,8 @@ type AccountTestService struct {
 	cfg                       *config.Config
 	tlsFPProfileService       *TLSFingerprintProfileService
 	providerRegistry          *modules.ProviderRegistry
+	channelService            *ChannelService
+	outboundRegistry          *outbound.Registry
 }
 
 // NewAccountTestService creates a new AccountTestService
@@ -83,6 +86,8 @@ func NewAccountTestService(
 	httpUpstream HTTPUpstream,
 	cfg *config.Config,
 	tlsFPProfileService *TLSFingerprintProfileService,
+	channelService *ChannelService,
+	outboundRegistry *outbound.Registry,
 ) *AccountTestService {
 	return &AccountTestService{
 		accountRepo:               accountRepo,
@@ -92,6 +97,8 @@ func NewAccountTestService(
 		httpUpstream:              httpUpstream,
 		cfg:                       cfg,
 		tlsFPProfileService:       tlsFPProfileService,
+		channelService:            channelService,
+		outboundRegistry:          outboundRegistry,
 	}
 }
 
@@ -189,11 +196,11 @@ func (s *AccountTestService) TestAccountConnection(c *gin.Context, accountID int
 		return s.testOpenAIAccountConnection(c, account, modelID, prompt, normalizeAccountTestMode(mode))
 	}
 
-	if account.IsGemini() {
+	if account.IsPureGemini() {
 		return s.testGeminiAccountConnection(c, account, modelID, prompt)
 	}
 
-	if account.Platform == PlatformAntigravity {
+	if account.IsAntigravity() {
 		return s.routeAntigravityTest(c, account, modelID, prompt)
 	}
 
@@ -299,8 +306,9 @@ func (s *AccountTestService) testClaudeAccountConnection(c *gin.Context, account
 
 	// Get proxy URL
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountTestProxyURL(c, ctx, account)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to resolve proxy: %s", err.Error()))
 	}
 
 	resp, err := s.httpUpstream.DoWithTLS(req, proxyURL, account.ID, account.Concurrency, s.tlsFPProfileService.ResolveTLSProfile(account))
@@ -371,8 +379,9 @@ func (s *AccountTestService) testClaudeVertexServiceAccountConnection(c *gin.Con
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountTestProxyURL(c, ctx, account)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to resolve proxy: %s", err.Error()))
 	}
 
 	resp, err := s.httpUpstream.DoWithTLS(req, proxyURL, account.ID, account.Concurrency, s.tlsFPProfileService.ResolveTLSProfile(account))
@@ -457,8 +466,9 @@ func (s *AccountTestService) testBedrockAccountConnection(c *gin.Context, ctx co
 	}
 
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountTestProxyURL(c, ctx, account)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to resolve proxy: %s", err.Error()))
 	}
 
 	resp, err := s.httpUpstream.DoWithTLS(req, proxyURL, account.ID, account.Concurrency, nil)
@@ -602,8 +612,9 @@ func (s *AccountTestService) testOpenAIAccountConnection(c *gin.Context, account
 
 	// Get proxy URL
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountTestProxyURL(c, ctx, account)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to resolve proxy: %s", err.Error()))
 	}
 
 	resp, err := s.httpUpstream.DoWithTLS(req, proxyURL, account.ID, account.Concurrency, s.tlsFPProfileService.ResolveTLSProfile(account))
@@ -671,8 +682,9 @@ func (s *AccountTestService) testOpenAIChatCompletionsConnection(
 	req.Header.Set("Authorization", "Bearer "+authToken)
 
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountTestProxyURL(c, ctx, account)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to resolve proxy: %s", err.Error()))
 	}
 
 	resp, err := s.httpUpstream.DoWithTLS(req, proxyURL, account.ID, account.Concurrency, s.tlsFPProfileService.ResolveTLSProfile(account))
@@ -767,8 +779,9 @@ func (s *AccountTestService) testOpenAICompactConnection(c *gin.Context, account
 	}
 
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountTestProxyURL(c, ctx, account)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to resolve proxy: %s", err.Error()))
 	}
 
 	resp, err := s.httpUpstream.DoWithTLS(req, proxyURL, account.ID, account.Concurrency, s.tlsFPProfileService.ResolveTLSProfile(account))
@@ -901,8 +914,9 @@ func (s *AccountTestService) testGeminiAccountConnection(c *gin.Context, account
 
 	// Get proxy and execute request
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountTestProxyURL(c, ctx, account)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to resolve proxy: %s", err.Error()))
 	}
 
 	resp, err := s.httpUpstream.DoWithTLS(req, proxyURL, account.ID, account.Concurrency, s.tlsFPProfileService.ResolveTLSProfile(account))
@@ -1518,8 +1532,9 @@ func (s *AccountTestService) testOpenAIImageAPIKey(c *gin.Context, ctx context.C
 	req.Header.Set("Authorization", "Bearer "+authToken)
 
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountTestProxyURL(c, ctx, account)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to resolve proxy: %s", err.Error()))
 	}
 
 	resp, err := s.httpUpstream.DoWithTLS(req, proxyURL, account.ID, account.Concurrency, s.tlsFPProfileService.ResolveTLSProfile(account))
@@ -1619,8 +1634,9 @@ func (s *AccountTestService) testOpenAIImageOAuth(c *gin.Context, ctx context.Co
 	}
 
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountTestProxyURL(c, ctx, account)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to resolve proxy: %s", err.Error()))
 	}
 	resp, err := s.httpUpstream.Do(req, proxyURL, account.ID, account.Concurrency)
 	if err != nil {

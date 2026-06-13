@@ -734,7 +734,7 @@ func isNonRetryableGeminiOAuthError(err error) bool {
 }
 
 func (s *GeminiOAuthService) RefreshAccountToken(ctx context.Context, account *Account) (*GeminiTokenInfo, error) {
-	if account.Platform != PlatformGemini || account.Type != AccountTypeOAuth {
+	if !account.IsPureGemini() || account.Type != AccountTypeOAuth {
 		return nil, fmt.Errorf("account is not a Gemini OAuth account")
 	}
 

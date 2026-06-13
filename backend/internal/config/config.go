@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Wei-Shaw/LightBridge/internal/i18n"
 	"github.com/spf13/viper"
 )
 
@@ -96,6 +97,7 @@ type Config struct {
 	TokenRefresh            TokenRefreshConfig            `mapstructure:"token_refresh"`
 	RunMode                 string                        `mapstructure:"run_mode" yaml:"run_mode"`
 	Timezone                string                        `mapstructure:"timezone"` // e.g. "Asia/Shanghai", "UTC"
+	Language                string                        `mapstructure:"language"` // default language for API error messages: "en" or "zh"
 	Gemini                  GeminiConfig                  `mapstructure:"gemini"`
 	Update                  UpdateConfig                  `mapstructure:"update"`
 	Idempotency             IdempotencyConfig             `mapstructure:"idempotency"`
@@ -558,6 +560,10 @@ type ModuleConfig struct {
 	MarketplaceRegistryPath   string `mapstructure:"marketplace_registry_path"`
 	MarketplaceRegistryURL    string `mapstructure:"marketplace_registry_url"`
 	MarketplaceTimeoutSeconds int    `mapstructure:"marketplace_timeout_seconds"`
+	Proxy                     struct {
+		MihomoBinaryPath string `mapstructure:"mihomo_binary_path"`
+		RuntimeDir       string `mapstructure:"runtime_dir"`
+	} `mapstructure:"proxy"`
 }
 
 type ServerConfig struct {
@@ -1515,6 +1521,10 @@ func load(allowMissingJWTSecret bool) (*Config, error) {
 		)
 	}
 
+	// Apply the configured default language for client-facing error messages.
+	// Per-request Accept-Language still overrides this at the handler layer.
+	i18n.SetDefault(i18n.ParseLang(cfg.Language))
+
 	return &cfg, nil
 }
 
@@ -1613,6 +1623,8 @@ func setDefaults() {
 	viper.SetDefault("modules.marketplace_registry_path", "")
 	viper.SetDefault("modules.marketplace_registry_url", DefaultModuleMarketplaceRegistryURL)
 	viper.SetDefault("modules.marketplace_timeout_seconds", 20)
+	viper.SetDefault("modules.proxy.mihomo_binary_path", "")
+	viper.SetDefault("modules.proxy.runtime_dir", "")
 
 	// Turnstile
 	viper.SetDefault("turnstile.required", false)
@@ -1763,6 +1775,10 @@ func setDefaults() {
 
 	// Timezone (default to Asia/Shanghai for Chinese users)
 	viper.SetDefault("timezone", "Asia/Shanghai")
+
+	// Language for API error messages returned to clients (en|zh). Per-request
+	// Accept-Language overrides this default.
+	viper.SetDefault("language", "en")
 
 	// API Key auth cache
 	viper.SetDefault("api_key_auth_cache.l1_size", 65535)

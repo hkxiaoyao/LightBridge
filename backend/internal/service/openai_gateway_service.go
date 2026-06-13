@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/LightBridge/internal/config"
+	"github.com/Wei-Shaw/LightBridge/internal/outbound"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/apicompat"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/ip"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
@@ -344,6 +345,7 @@ type OpenAIGatewayService struct {
 	balanceNotifyService  *BalanceNotifyService
 	settingService        *SettingService
 	userPlatformQuotaRepo UserPlatformQuotaRepository
+	outboundRegistry      *outbound.Registry
 
 	openaiWSPoolOnce              sync.Once
 	openaiWSStateStoreOnce        sync.Once
@@ -389,6 +391,7 @@ func NewOpenAIGatewayService(
 	balanceNotifyService *BalanceNotifyService,
 	settingService *SettingService,
 	userPlatformQuotaRepo UserPlatformQuotaRepository,
+	outboundRegistry *outbound.Registry,
 ) *OpenAIGatewayService {
 	svc := &OpenAIGatewayService{
 		accountRepo:         accountRepo,
@@ -421,6 +424,7 @@ func NewOpenAIGatewayService(
 		balanceNotifyService:  balanceNotifyService,
 		settingService:        settingService,
 		userPlatformQuotaRepo: userPlatformQuotaRepo,
+		outboundRegistry:      outboundRegistry,
 		responseHeaderFilter:  compileResponseHeaderFilter(cfg),
 		codexSnapshotThrottle: newAccountWriteThrottle(openAICodexSnapshotPersistMinInterval),
 	}
@@ -748,7 +752,7 @@ func (s *OpenAIGatewayService) writeOpenAIWSFallbackErrorResponse(c *gin.Context
 	setOpsUpstreamError(c, statusCode, upstreamMessage, "")
 	if account != nil {
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
+			Platform:           account.EffectivePlatform(),
 			AccountID:          account.ID,
 			AccountName:        account.Name,
 			UpstreamStatusCode: statusCode,
@@ -3003,8 +3007,11 @@ func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, acco
 
 		// Get proxy URL
 		proxyURL := ""
-		if account.ProxyID != nil && account.Proxy != nil {
-			proxyURL = account.Proxy.URL()
+		if !account.IsCustomBaseURLEnabled() || account.GetCustomBaseURL() == "" {
+			proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, apiKeyGroupID(apiKey))
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		// Send request
@@ -3016,7 +3023,7 @@ func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, acco
 			safeErr := sanitizeUpstreamErrorMessage(err.Error())
 			setOpsUpstreamError(c, 0, safeErr, "")
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: 0,
@@ -3063,7 +3070,7 @@ func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, acco
 					upstreamDetail = truncateString(string(respBody), maxBytes)
 				}
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -3291,8 +3298,11 @@ func (s *OpenAIGatewayService) forwardOpenAIPassthrough(
 	}
 
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	if !account.IsCustomBaseURLEnabled() || account.GetCustomBaseURL() == "" {
+		proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, apiKeyGroupID(apiKey))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if c != nil {
@@ -3306,7 +3316,7 @@ func (s *OpenAIGatewayService) forwardOpenAIPassthrough(
 		safeErr := sanitizeUpstreamErrorMessage(err.Error())
 		setOpsUpstreamError(c, 0, safeErr, "")
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
+			Platform:           account.EffectivePlatform(),
 			AccountID:          account.ID,
 			AccountName:        account.Name,
 			UpstreamStatusCode: 0,
@@ -3568,7 +3578,7 @@ func (s *OpenAIGatewayService) handleFailoverErrorResponsePassthrough(
 	reqModel, _, _ := extractOpenAIRequestMetaFromBody(requestBody)
 	_ = s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, body, reqModel)
 	appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-		Platform:             account.Platform,
+		Platform:             account.EffectivePlatform(),
 		AccountID:            account.ID,
 		AccountName:          account.Name,
 		UpstreamStatusCode:   resp.StatusCode,
@@ -3612,7 +3622,7 @@ func (s *OpenAIGatewayService) handleErrorResponsePassthrough(
 	reqModel, _, _ := extractOpenAIRequestMetaFromBody(requestBody)
 	_ = s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, body, reqModel)
 	appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-		Platform:             account.Platform,
+		Platform:             account.EffectivePlatform(),
 		AccountID:            account.ID,
 		AccountName:          account.Name,
 		UpstreamStatusCode:   resp.StatusCode,
@@ -4339,7 +4349,7 @@ func (s *OpenAIGatewayService) handleErrorResponse(
 	// Check custom error codes
 	if !account.ShouldHandleErrorCode(resp.StatusCode) {
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
+			Platform:           account.EffectivePlatform(),
 			AccountID:          account.ID,
 			AccountName:        account.Name,
 			UpstreamStatusCode: resp.StatusCode,
@@ -4374,7 +4384,7 @@ func (s *OpenAIGatewayService) handleErrorResponse(
 		kind = "failover"
 	}
 	appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-		Platform:           account.Platform,
+		Platform:           account.EffectivePlatform(),
 		AccountID:          account.ID,
 		AccountName:        account.Name,
 		UpstreamStatusCode: resp.StatusCode,
@@ -4484,7 +4494,7 @@ func (s *OpenAIGatewayService) handleCompatErrorResponse(
 	// return a generic error without exposing upstream details.
 	if !account.ShouldHandleErrorCode(resp.StatusCode) {
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
+			Platform:           account.EffectivePlatform(),
 			AccountID:          account.ID,
 			AccountName:        account.Name,
 			UpstreamStatusCode: resp.StatusCode,
@@ -4513,7 +4523,7 @@ func (s *OpenAIGatewayService) handleCompatErrorResponse(
 		kind = "failover"
 	}
 	appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-		Platform:           account.Platform,
+		Platform:           account.EffectivePlatform(),
 		AccountID:          account.ID,
 		AccountName:        account.Name,
 		UpstreamStatusCode: resp.StatusCode,

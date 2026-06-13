@@ -48,7 +48,7 @@ func (h *GatewayHandler) Responses(c *gin.Context) {
 	body, err := pkghttputil.ReadRequestBodyWithPrealloc(c.Request)
 	if err != nil {
 		if maxErr, ok := extractMaxBytesError(err); ok {
-			h.responsesErrorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(maxErr.Limit))
+			h.responsesErrorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(c, maxErr.Limit))
 			return
 		}
 		h.responsesErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to read request body")
@@ -175,7 +175,7 @@ func (h *GatewayHandler) Responses(c *gin.Context) {
 		if err != nil {
 			if len(fs.FailedAccountIDs) == 0 {
 				markOpsRoutingCapacityLimitedIfNoAvailable(c, err)
-				h.responsesErrorResponse(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error())
+				h.responsesErrorResponse(c, http.StatusServiceUnavailable, "api_error", localizef(c, "No available accounts: %s", err.Error()))
 				return
 			}
 			action := fs.HandleSelectionExhausted(c.Request.Context())
@@ -240,7 +240,7 @@ func (h *GatewayHandler) Responses(c *gin.Context) {
 					h.handleResponsesFailoverExhausted(c, failoverErr, true)
 					return
 				}
-				action := fs.HandleFailoverError(c.Request.Context(), h.gatewayService, account.ID, account.Platform, failoverErr)
+				action := fs.HandleFailoverError(c.Request.Context(), h.gatewayService, account.ID, account.EffectivePlatform(), failoverErr)
 				switch action {
 				case FailoverContinue:
 					continue
@@ -264,7 +264,7 @@ func (h *GatewayHandler) Responses(c *gin.Context) {
 		clientIP := ip.GetClientIP(c)
 		requestPayloadHash := service.HashUsageRequestPayload(body)
 		inboundEndpoint := GetInboundEndpoint(c)
-		upstreamEndpoint := GetUpstreamEndpoint(c, account.Platform)
+		upstreamEndpoint := GetUpstreamEndpoint(c, account.EffectivePlatform())
 
 		quotaPlatform := service.QuotaPlatform(c.Request.Context(), apiKey)
 		h.submitUsageRecordTask(c.Request.Context(), func(ctx context.Context) {
@@ -298,7 +298,7 @@ func (h *GatewayHandler) responsesErrorResponse(c *gin.Context, status int, code
 	c.JSON(status, gin.H{
 		"error": gin.H{
 			"code":    code,
-			"message": message,
+			"message": localizeMessage(c, message),
 		},
 	})
 }

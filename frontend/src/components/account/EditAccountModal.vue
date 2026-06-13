@@ -2320,6 +2320,13 @@
         data-tour="account-form-groups"
       />
 
+      <ProxyPolicyPanel
+        v-if="account?.id"
+        entity-type="account"
+        :entity-id="account.id"
+        title="Account Proxy Override"
+      />
+
     </form>
 
     <template #footer>
@@ -2396,6 +2403,7 @@ import Icon from '@/components/icons/Icon.vue'
 import ProxySelector from '@/components/common/ProxySelector.vue'
 import ProxyAdBanner from '@/components/common/ProxyAdBanner.vue'
 import GroupSelector from '@/components/common/GroupSelector.vue'
+import ProxyPolicyPanel from '@/components/admin/proxy/ProxyPolicyPanel.vue'
 import ModelWhitelistSelector from '@/components/account/ModelWhitelistSelector.vue'
 import QuotaLimitCard from '@/components/account/QuotaLimitCard.vue'
 import { applyInterceptWarmup } from '@/components/account/credentialsBuilder'

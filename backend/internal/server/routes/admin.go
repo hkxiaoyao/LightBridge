@@ -43,6 +43,7 @@ func RegisterAdminRoutes(
 
 		// 代理管理
 		registerProxyRoutes(admin, h)
+		registerProxyModuleRoutes(admin, h)
 
 		// 卡密管理
 		registerRedeemCodeRoutes(admin, h)
@@ -394,6 +395,34 @@ func registerProxyRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		proxies.GET("/:id/accounts", h.Admin.Proxy.GetProxyAccounts)
 		proxies.POST("/batch-delete", h.Admin.Proxy.BatchDelete)
 		proxies.POST("/batch", h.Admin.Proxy.BatchCreate)
+	}
+}
+
+func registerProxyModuleRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	if h == nil || h.Admin == nil || h.Admin.ProxyModule == nil {
+		return
+	}
+	proxy := admin.Group("/proxy")
+	{
+		proxy.GET("/nodes", h.Admin.ProxyModule.ListNodes)
+		proxy.POST("/nodes", h.Admin.ProxyModule.CreateNode)
+		proxy.POST("/nodes/import", h.Admin.ProxyModule.ImportNodes)
+		proxy.DELETE("/nodes/:id", h.Admin.ProxyModule.DeleteNode)
+
+		proxy.GET("/profiles", h.Admin.ProxyModule.ListProfiles)
+		proxy.POST("/profiles", h.Admin.ProxyModule.CreateProfile)
+		proxy.PUT("/profiles/:id", h.Admin.ProxyModule.UpdateProfile)
+		proxy.POST("/profiles/:id/start", h.Admin.ProxyModule.StartProfile)
+		proxy.POST("/profiles/:id/stop", h.Admin.ProxyModule.StopProfile)
+		proxy.POST("/profiles/:id/restart", h.Admin.ProxyModule.RestartProfile)
+		proxy.POST("/profiles/:id/test", h.Admin.ProxyModule.TestProfile)
+		proxy.GET("/profiles/:id/runtime", h.Admin.ProxyModule.GetProfileRuntime)
+		proxy.GET("/runtime/status", h.Admin.ProxyModule.GetRuntimeStatus)
+		proxy.POST("/migrate-legacy", h.Admin.ProxyModule.MigrateLegacy)
+
+		proxy.GET("/bindings", h.Admin.ProxyModule.ListBindings)
+		proxy.POST("/bindings", h.Admin.ProxyModule.CreateBinding)
+		proxy.DELETE("/bindings/:id", h.Admin.ProxyModule.DeleteBinding)
 	}
 }
 

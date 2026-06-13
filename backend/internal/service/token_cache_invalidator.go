@@ -31,7 +31,9 @@ func (c *CompositeTokenCacheInvalidator) InvalidateToken(ctx context.Context, ac
 	var keysToDelete []string
 	accountIDKey := "account:" + strconv.FormatInt(account.ID, 10)
 
-	switch account.Platform {
+	// 使用 EffectivePlatform：Antigravity 账号现 Platform=="gemini"，但其 token 缓存
+	// key 与原生 Gemini 不同，需经别名路由到 antigravity 分支，避免误删/漏删缓存。
+	switch account.EffectivePlatform() {
 	case PlatformGemini:
 		// Gemini 可能有两种缓存键：project_id 或 account_id
 		// 首次获取 token 时可能没有 project_id，之后自动检测到 project_id 后会使用新 key

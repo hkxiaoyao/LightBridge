@@ -848,7 +848,7 @@ func (h *AccountHandler) refreshSingleAccount(ctx context.Context, account *serv
 				newCredentials[k] = v
 			}
 		}
-	} else if account.Platform == service.PlatformGemini {
+	} else if account.IsPureGemini() {
 		tokenInfo, err := h.geminiOAuthService.RefreshAccountToken(ctx, account)
 		if err != nil {
 			return nil, "", fmt.Errorf("failed to refresh credentials: %w", err)
@@ -860,7 +860,7 @@ func (h *AccountHandler) refreshSingleAccount(ctx context.Context, account *serv
 				newCredentials[k] = v
 			}
 		}
-	} else if account.Platform == service.PlatformAntigravity {
+	} else if account.IsAntigravity() {
 		tokenInfo, err := h.antigravityOAuthService.RefreshAccountToken(ctx, account)
 		if err != nil {
 			return nil, "", err
@@ -1352,7 +1352,9 @@ func (h *AccountHandler) BatchCreate(c *gin.Context) {
 			}
 			// 收集需要异步设置隐私的 OAuth 账号
 			if account.Type == service.AccountTypeOAuth {
-				switch account.Platform {
+				// 使用 EffectivePlatform：Antigravity 账号现 Platform=="gemini"，
+				// 需按别名路由到 antigravity 隐私设置分支。
+				switch account.EffectivePlatform() {
 				case service.PlatformAntigravity:
 					antigravityPrivacyAccounts = append(antigravityPrivacyAccounts, account)
 				case service.PlatformOpenAI:
@@ -1855,8 +1857,8 @@ func (h *AccountHandler) GetAvailableModels(c *gin.Context) {
 		return
 	}
 
-	// Handle Gemini accounts
-	if account.IsGemini() {
+	// Handle Gemini accounts（仅原生 Gemini；Antigravity 在下方独立分支处理）
+	if account.IsPureGemini() {
 		// For OAuth accounts: return default Gemini models
 		if account.IsOAuth() {
 			response.Success(c, geminicli.DefaultModels)
@@ -1894,7 +1896,7 @@ func (h *AccountHandler) GetAvailableModels(c *gin.Context) {
 	}
 
 	// Handle Antigravity accounts: return Claude + Gemini models
-	if account.Platform == service.PlatformAntigravity {
+	if account.IsAntigravity() {
 		// 直接复用 antigravity.DefaultModels()，与 /v1/models 端点保持同步
 		response.Success(c, antigravity.DefaultModels())
 		return
@@ -2001,7 +2003,7 @@ func (h *AccountHandler) SetPrivacy(c *gin.Context) {
 		return
 	}
 	var mode string
-	switch account.Platform {
+	switch account.EffectivePlatform() {
 	case service.PlatformOpenAI:
 		mode = h.adminService.ForceOpenAIPrivacy(c.Request.Context(), account)
 	case service.PlatformAntigravity:
@@ -2044,7 +2046,7 @@ func (h *AccountHandler) RefreshTier(c *gin.Context) {
 		return
 	}
 
-	if account.Platform != service.PlatformGemini || account.Type != service.AccountTypeOAuth {
+	if !account.IsPureGemini() || account.Type != service.AccountTypeOAuth {
 		response.BadRequest(c, "Only Gemini OAuth accounts support tier refresh")
 		return
 	}
@@ -2119,7 +2121,7 @@ func (h *AccountHandler) BatchRefreshTier(c *gin.Context) {
 			if acc == nil {
 				continue
 			}
-			if acc.Platform != service.PlatformGemini || acc.Type != service.AccountTypeOAuth {
+			if !acc.IsPureGemini() || acc.Type != service.AccountTypeOAuth {
 				continue
 			}
 			oauthType, _ := acc.Credentials["oauth_type"].(string)

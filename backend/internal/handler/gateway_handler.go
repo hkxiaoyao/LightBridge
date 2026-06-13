@@ -140,7 +140,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 	body, err := pkghttputil.ReadRequestBodyWithPrealloc(c.Request)
 	if err != nil {
 		if maxErr, ok := extractMaxBytesError(err); ok {
-			h.errorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(maxErr.Limit))
+			h.errorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(c, maxErr.Limit))
 			return
 		}
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to read request body")
@@ -334,7 +334,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 						zap.String("platform", platform),
 						zap.Error(err),
 					)
-					h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
+					h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", localizef(c, "No available accounts: %s", err.Error()), streamStarted)
 					return
 				}
 				action := fs.HandleSelectionExhausted(c.Request.Context())
@@ -439,7 +439,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 			}
 			// 记录 Forward 前已写入字节数，Forward 后若增加则说明 SSE 内容已发，禁止 failover
 			writerSizeBeforeForward := c.Writer.Size()
-			if account.Platform == service.PlatformAntigravity {
+			if account.IsAntigravity() {
 				result, err = h.antigravityGatewayService.ForwardGemini(requestCtx, c, account, reqModel, "generateContent", reqStream, body, hasBoundSession)
 			} else {
 				result, err = h.geminiCompatService.Forward(requestCtx, c, account, body)
@@ -455,7 +455,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 						h.handleFailoverExhausted(c, failoverErr, service.PlatformGemini, true)
 						return
 					}
-					action := fs.HandleFailoverError(c.Request.Context(), h.gatewayService, account.ID, account.Platform, failoverErr)
+					action := fs.HandleFailoverError(c.Request.Context(), h.gatewayService, account.ID, account.EffectivePlatform(), failoverErr)
 					switch action {
 					case FailoverContinue:
 						continue
@@ -502,7 +502,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 			clientIP := ip.GetClientIP(c)
 			requestPayloadHash := service.HashUsageRequestPayload(body)
 			inboundEndpoint := GetInboundEndpoint(c)
-			upstreamEndpoint := GetUpstreamEndpoint(c, account.Platform)
+			upstreamEndpoint := GetUpstreamEndpoint(c, account.EffectivePlatform())
 
 			if result.ReasoningEffort == nil {
 				result.ReasoningEffort = service.NormalizeClaudeOutputEffort(parsedReq.OutputEffort)
@@ -580,7 +580,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 						zap.Bool("fallback_used", fallbackUsed),
 						zap.Error(err),
 					)
-					h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
+					h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", localizef(c, "No available accounts: %s", err.Error()), streamStarted)
 					return
 				}
 				action := fs.HandleSelectionExhausted(c.Request.Context())
@@ -761,7 +761,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 			}
 			// 记录 Forward 前已写入字节数，Forward 后若增加则说明 SSE 内容已发，禁止 failover
 			writerSizeBeforeForward := c.Writer.Size()
-			if account.Platform == service.PlatformAntigravity && account.Type != service.AccountTypeAPIKey {
+			if account.IsAntigravity() && account.Type != service.AccountTypeAPIKey {
 				result, err = h.antigravityGatewayService.Forward(requestCtx, c, account, body, hasBoundSession)
 			} else {
 				result, err = h.gatewayService.Forward(requestCtx, c, account, parsedReq)
@@ -839,7 +839,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 						h.handleFailoverExhausted(c, failoverErr, account.Platform, true)
 						return
 					}
-					action := fs.HandleFailoverError(c.Request.Context(), h.gatewayService, account.ID, account.Platform, failoverErr)
+					action := fs.HandleFailoverError(c.Request.Context(), h.gatewayService, account.ID, account.EffectivePlatform(), failoverErr)
 					switch action {
 					case FailoverContinue:
 						continue
@@ -897,7 +897,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 			clientIP := ip.GetClientIP(c)
 			requestPayloadHash := service.HashUsageRequestPayload(body)
 			inboundEndpoint := GetInboundEndpoint(c)
-			upstreamEndpoint := GetUpstreamEndpoint(c, account.Platform)
+			upstreamEndpoint := GetUpstreamEndpoint(c, account.EffectivePlatform())
 
 			if result.ReasoningEffort == nil {
 				result.ReasoningEffort = service.NormalizeClaudeOutputEffort(parsedReq.OutputEffort)
@@ -1473,7 +1473,7 @@ func (h *GatewayHandler) calculateSubscriptionRemaining(group *service.Group, su
 
 // handleConcurrencyError handles concurrency-related acquire errors.
 func (h *GatewayHandler) handleConcurrencyError(c *gin.Context, err error, slotType string, streamStarted bool) {
-	status, errType, message := concurrencyErrorResponse(err, slotType)
+	status, errType, message := concurrencyErrorResponse(c, err, slotType)
 	h.handleStreamingAwareError(c, status, errType, message, streamStarted)
 }
 
@@ -1545,6 +1545,9 @@ func (h *GatewayHandler) mapUpstreamError(statusCode int) (int, string, string) 
 
 // handleStreamingAwareError handles errors that may occur after streaming has started
 func (h *GatewayHandler) handleStreamingAwareError(c *gin.Context, status int, errType, message string, streamStarted bool) {
+	// Localize the client-facing message once; both the SSE and JSON branches
+	// below emit it. errorResponse re-translates idempotently for direct callers.
+	message = localizeMessage(c, message)
 	if streamStarted {
 		// /v1/responses 的严格 SDK（Codex CLI）要求终止事件必须属于
 		// response.completed/failed/incomplete/cancelled 集合。
@@ -1636,7 +1639,7 @@ func (h *GatewayHandler) errorResponse(c *gin.Context, status int, errType, mess
 		"type": "error",
 		"error": gin.H{
 			"type":    errType,
-			"message": message,
+			"message": localizeMessage(c, message),
 		},
 	})
 }
@@ -1669,7 +1672,7 @@ func (h *GatewayHandler) CountTokens(c *gin.Context) {
 	body, err := pkghttputil.ReadRequestBodyWithPrealloc(c.Request)
 	if err != nil {
 		if maxErr, ok := extractMaxBytesError(err); ok {
-			h.errorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(maxErr.Limit))
+			h.errorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(c, maxErr.Limit))
 			return
 		}
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to read request body")

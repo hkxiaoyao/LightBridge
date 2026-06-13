@@ -10,11 +10,6 @@
       <div class="text-sm text-gray-600 dark:text-dark-300">
         {{ t('admin.accounts.dataImportHint') }}
       </div>
-      <div
-        class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-600 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400"
-      >
-        {{ t('admin.accounts.dataImportWarning') }}
-      </div>
 
       <div>
         <label class="input-label">{{ t('admin.accounts.dataImportFile') }}</label>
@@ -43,12 +38,12 @@
 
       <div>
         <label class="input-label">{{ t('admin.accounts.dataImportURL') }}</label>
-        <input
-          v-model.trim="sourceURL"
-          type="url"
+        <textarea
+          v-model="sourceURLs"
           class="input"
+          rows="3"
           :placeholder="t('admin.accounts.dataImportURLPlaceholder')"
-        />
+        ></textarea>
         <p class="input-hint">{{ t('admin.accounts.dataImportURLHint') }}</p>
       </div>
 
@@ -57,7 +52,7 @@
           <label class="input-label">{{ t('admin.accounts.dataImportGroups') }}</label>
           <select v-model="selectedGroupIds" multiple class="input min-h-28">
             <option v-for="group in groups" :key="group.id" :value="group.id">
-              {{ group.name }}
+              {{ group.name }} · {{ group.platform }}
             </option>
           </select>
           <p class="input-hint">{{ t('admin.accounts.dataImportGroupsHint') }}</p>
@@ -104,6 +99,25 @@
           </span>
         </span>
       </label>
+
+      <div
+        v-if="importing || importProgress.total > 0"
+        class="space-y-2 rounded-lg border border-gray-200 p-3 dark:border-dark-700"
+      >
+        <div class="flex items-center justify-between text-xs text-gray-600 dark:text-dark-300">
+          <span>{{ t('admin.accounts.dataImportProgress') }}</span>
+          <span>{{ importProgress.completed }} / {{ importProgress.total }}</span>
+        </div>
+        <div class="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-dark-700">
+          <div
+            class="h-full rounded-full bg-primary-600 transition-all"
+            :style="{ width: `${importProgressPercent}%` }"
+          ></div>
+        </div>
+        <div class="truncate text-xs text-gray-500 dark:text-dark-400">
+          {{ importProgress.current || t('admin.accounts.dataImportProgressIdle') }}
+        </div>
+      </div>
 
       <div
         v-if="result"
@@ -155,6 +169,7 @@ import { useI18n } from 'vue-i18n'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import { adminAPI } from '@/api/admin'
 import { useAppStore } from '@/stores/app'
+import { extractApiErrorMessage } from '@/utils/apiError'
 import type { AdminDataImportPayload, AdminDataImportResult, AdminGroup } from '@/types'
 
 interface Props {
@@ -175,7 +190,7 @@ const appStore = useAppStore()
 const importing = ref(false)
 const extracting = ref(false)
 const files = ref<File[]>([])
-const sourceURL = ref('')
+const sourceURLs = ref('')
 const result = ref<AdminDataImportResult | null>(null)
 const compatibilityMode = ref(false)
 const groups = ref<AdminGroup[]>([])
@@ -187,6 +202,11 @@ const defaults = reactive({
   rate_multiplier: 1,
   auto_pause_on_expired: true
 })
+const importProgress = reactive({
+  completed: 0,
+  total: 0,
+  current: ''
+})
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const fileLabel = computed(() => {
@@ -196,13 +216,23 @@ const fileLabel = computed(() => {
 })
 
 const errorItems = computed(() => result.value?.errors || [])
+const importProgressPercent = computed(() => {
+  if (importProgress.total <= 0) return 0
+  return Math.min(100, Math.round((importProgress.completed / importProgress.total) * 100))
+})
 
 async function loadGroups() {
   try {
-    groups.value = await adminAPI.groups.getByPlatform('openai')
+    groups.value = await adminAPI.groups.getAll()
   } catch {
     groups.value = []
   }
+}
+
+function resetImportProgress() {
+  importProgress.completed = 0
+  importProgress.total = 0
+  importProgress.current = ''
 }
 
 watch(
@@ -210,8 +240,9 @@ watch(
   (open) => {
     if (open) {
       files.value = []
-      sourceURL.value = ''
+      sourceURLs.value = ''
       result.value = null
+      resetImportProgress()
       compatibilityMode.value = false
       selectedGroupIds.value = []
       overrideDefaults.value = false
@@ -425,9 +456,16 @@ const commonImportOptions = () => {
   }
 }
 
+const parseSourceURLs = () => {
+  return sourceURLs.value
+    .split(/\r?\n/)
+    .map((url) => url.trim())
+    .filter(Boolean)
+}
+
 const handleImport = async () => {
-  const remoteURL = sourceURL.value.trim()
-  if (files.value.length === 0 && !remoteURL) {
+  const remoteURLs = parseSourceURLs()
+  if (files.value.length === 0 && remoteURLs.length === 0) {
     appStore.showError(t('admin.accounts.dataImportSelectFile'))
     return
   }
@@ -436,14 +474,20 @@ const handleImport = async () => {
   try {
     const merged = emptyResult()
     const importOptions = commonImportOptions()
-    if (remoteURL) {
+    importProgress.completed = 0
+    importProgress.total = remoteURLs.length + files.value.length
+    importProgress.current = ''
+    for (const remoteURL of remoteURLs) {
+      importProgress.current = remoteURL
       const res = await adminAPI.accounts.importData({
         source_url: remoteURL,
         ...importOptions
       })
       mergeResult(merged, res)
+      importProgress.completed++
     }
     for (const sourceFile of files.value) {
+      importProgress.current = sourceFile.name
       const text = await readFileAsText(sourceFile)
       const dataPayload = parseImportPayload(text)
 
@@ -452,7 +496,9 @@ const handleImport = async () => {
         ...importOptions
       })
       mergeResult(merged, res)
+      importProgress.completed++
     }
+    importProgress.current = ''
     result.value = merged
 
     const msgParams: Record<string, unknown> = {
@@ -472,7 +518,7 @@ const handleImport = async () => {
     if (error instanceof SyntaxError) {
       appStore.showError(t('admin.accounts.dataImportParseFailed'))
     } else {
-      appStore.showError(error?.message || t('admin.accounts.dataImportFailed'))
+      appStore.showError(extractApiErrorMessage(error, t('admin.accounts.dataImportFailed')))
     }
   } finally {
     importing.value = false

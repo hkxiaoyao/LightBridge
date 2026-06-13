@@ -2471,10 +2471,16 @@ func (s *adminServiceImpl) CreateAccount(ctx context.Context, input *CreateAccou
 		}
 	}
 
+	// 归一化平台别名：将旧的 "antigravity" 平台输入转换为 gemini + sub_platform。
+	// 注意：分组绑定/混合渠道检查（上方）仍使用 input.Platform 别名，以匹配
+	// 历史上以 platform="antigravity" 存在的 antigravity-default 分组。
+	normalizedPlatform, subPlatform := NormalizePlatform(input.Platform)
+
 	account := &Account{
 		Name:        input.Name,
 		Notes:       normalizeAccountNotes(input.Notes),
-		Platform:    input.Platform,
+		Platform:    normalizedPlatform,
+		SubPlatform: subPlatform,
 		Type:        input.Type,
 		Credentials: input.Credentials,
 		Extra:       input.Extra,
@@ -2526,17 +2532,7 @@ func (s *adminServiceImpl) CreateAccount(ctx context.Context, input *CreateAccou
 	// OAuth 账号：创建后异步设置隐私。
 	// 使用 Ensure（幂等）而非 Force：新建账号 Extra 为空时效果相同，但更安全。
 	if account.Type == AccountTypeOAuth {
-		switch account.Platform {
-		case PlatformOpenAI:
-			go func() {
-				defer func() {
-					if r := recover(); r != nil {
-						slog.Error("create_account_openai_privacy_panic", "account_id", account.ID, "recover", r)
-					}
-				}()
-				s.EnsureOpenAIPrivacy(context.Background(), account)
-			}()
-		case PlatformAntigravity:
+		if account.IsAntigravity() {
 			go func() {
 				defer func() {
 					if r := recover(); r != nil {
@@ -2544,6 +2540,15 @@ func (s *adminServiceImpl) CreateAccount(ctx context.Context, input *CreateAccou
 					}
 				}()
 				s.EnsureAntigravityPrivacy(context.Background(), account)
+			}()
+		} else if account.Platform == PlatformOpenAI {
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						slog.Error("create_account_openai_privacy_panic", "account_id", account.ID, "recover", r)
+					}
+				}()
+				s.EnsureOpenAIPrivacy(context.Background(), account)
 			}()
 		}
 	}
@@ -2582,14 +2587,14 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 			}
 		}
 		account.Extra = input.Extra
-		if account.Platform == PlatformAntigravity && wasOveragesEnabled && !account.IsOveragesEnabled() {
+		if account.IsAntigravity() && wasOveragesEnabled && !account.IsOveragesEnabled() {
 			delete(account.Extra, "antigravity_credits_overages") // 清理旧版 overages 运行态
 			// 清除 AICredits 限流 key
 			if rawLimits, ok := account.Extra[modelRateLimitsKey].(map[string]any); ok {
 				delete(rawLimits, creditsExhaustedKey)
 			}
 		}
-		if account.Platform == PlatformAntigravity && !wasOveragesEnabled && account.IsOveragesEnabled() {
+		if account.IsAntigravity() && !wasOveragesEnabled && account.IsOveragesEnabled() {
 			delete(account.Extra, modelRateLimitsKey)
 			delete(account.Extra, "antigravity_credits_overages") // 清理旧版 overages 运行态
 		}
@@ -2654,7 +2659,7 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 
 		// 检查混合渠道风险（除非用户已确认）
 		if !input.SkipMixedChannelCheck {
-			if err := s.checkMixedChannelRisk(ctx, account.ID, account.Platform, *input.GroupIDs); err != nil {
+			if err := s.checkMixedChannelRisk(ctx, account.ID, account.EffectivePlatform(), *input.GroupIDs); err != nil {
 				return nil, err
 			}
 		}
@@ -3511,7 +3516,9 @@ func (s *adminServiceImpl) checkMixedChannelRisk(ctx context.Context, currentAcc
 				continue // 跳过当前账号
 			}
 
-			otherPlatform := getAccountPlatform(account.Platform)
+			// 使用 EffectivePlatform：Antigravity 账号现 Platform=="gemini"，
+			// 需经别名识别为 Antigravity 渠道家族，否则混合渠道检测会漏判。
+			otherPlatform := getAccountPlatform(account.EffectivePlatform())
 			if otherPlatform == "" {
 				continue // 不是 Antigravity 或 Anthropic，跳过
 			}
@@ -3745,7 +3752,7 @@ func (s *adminServiceImpl) ForceOpenAIPrivacy(ctx context.Context, account *Acco
 // 仅当 privacy_mode 已成功设置（"privacy_set"）时跳过；
 // 未设置或之前失败（"privacy_set_failed"）均会重试。
 func (s *adminServiceImpl) EnsureAntigravityPrivacy(ctx context.Context, account *Account) string {
-	if account.Platform != PlatformAntigravity || account.Type != AccountTypeOAuth {
+	if !account.IsAntigravity() || account.Type != AccountTypeOAuth {
 		return ""
 	}
 	if account.Extra != nil {
@@ -3783,7 +3790,7 @@ func (s *adminServiceImpl) EnsureAntigravityPrivacy(ctx context.Context, account
 
 // ForceAntigravityPrivacy 强制重新设置 Antigravity OAuth 账号隐私，无论当前状态。
 func (s *adminServiceImpl) ForceAntigravityPrivacy(ctx context.Context, account *Account) string {
-	if account.Platform != PlatformAntigravity || account.Type != AccountTypeOAuth {
+	if !account.IsAntigravity() || account.Type != AccountTypeOAuth {
 		return ""
 	}
 

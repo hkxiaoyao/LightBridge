@@ -62,7 +62,7 @@ func (h *GatewayHandler) GeminiV1BetaListModels(c *gin.Context) {
 			return
 		}
 		markOpsRoutingCapacityLimitedIfNoAvailable(c, err)
-		googleError(c, http.StatusServiceUnavailable, "No available Gemini accounts: "+err.Error())
+		googleError(c, http.StatusServiceUnavailable, localizef(c, "No available Gemini accounts: %s", err.Error()))
 		return
 	}
 
@@ -115,7 +115,7 @@ func (h *GatewayHandler) GeminiV1BetaGetModel(c *gin.Context) {
 			return
 		}
 		markOpsRoutingCapacityLimitedIfNoAvailable(c, err)
-		googleError(c, http.StatusServiceUnavailable, "No available Gemini accounts: "+err.Error())
+		googleError(c, http.StatusServiceUnavailable, localizef(c, "No available Gemini accounts: %s", err.Error()))
 		return
 	}
 
@@ -173,7 +173,7 @@ func (h *GatewayHandler) GeminiV1BetaModels(c *gin.Context) {
 	body, err := pkghttputil.ReadRequestBodyWithPrealloc(c.Request)
 	if err != nil {
 		if maxErr, ok := extractMaxBytesError(err); ok {
-			googleError(c, http.StatusRequestEntityTooLarge, buildBodyTooLargeMessage(maxErr.Limit))
+			googleError(c, http.StatusRequestEntityTooLarge, buildBodyTooLargeMessage(c, maxErr.Limit))
 			return
 		}
 		googleError(c, http.StatusBadRequest, "Failed to read request body")
@@ -375,7 +375,7 @@ func (h *GatewayHandler) GeminiV1BetaModels(c *gin.Context) {
 		if err != nil {
 			if len(fs.FailedAccountIDs) == 0 {
 				markOpsRoutingCapacityLimitedIfNoAvailable(c, err)
-				googleError(c, http.StatusServiceUnavailable, "No available Gemini accounts: "+err.Error())
+				googleError(c, http.StatusServiceUnavailable, localizef(c, "No available Gemini accounts: %s", err.Error()))
 				return
 			}
 			action := fs.HandleSelectionExhausted(c.Request.Context())
@@ -477,7 +477,7 @@ func (h *GatewayHandler) GeminiV1BetaModels(c *gin.Context) {
 		if fs.SwitchCount > 0 {
 			requestCtx = service.WithAccountSwitchCount(requestCtx, fs.SwitchCount, h.metadataBridgeEnabled())
 		}
-		if account.Platform == service.PlatformAntigravity && account.Type != service.AccountTypeAPIKey {
+		if account.IsAntigravity() && account.Type != service.AccountTypeAPIKey {
 			result, err = h.antigravityGatewayService.ForwardGemini(requestCtx, c, account, modelName, action, stream, body, hasBoundSession)
 		} else {
 			result, err = h.geminiCompatService.ForwardNative(requestCtx, c, account, modelName, action, stream, body)
@@ -488,7 +488,7 @@ func (h *GatewayHandler) GeminiV1BetaModels(c *gin.Context) {
 		if err != nil {
 			var failoverErr *service.UpstreamFailoverError
 			if errors.As(err, &failoverErr) {
-				failoverAction := fs.HandleFailoverError(c.Request.Context(), h.gatewayService, account.ID, account.Platform, failoverErr)
+				failoverAction := fs.HandleFailoverError(c.Request.Context(), h.gatewayService, account.ID, account.EffectivePlatform(), failoverErr)
 				switch failoverAction {
 				case FailoverContinue:
 					continue
@@ -526,7 +526,7 @@ func (h *GatewayHandler) GeminiV1BetaModels(c *gin.Context) {
 		// 使用量记录通过有界 worker 池提交，避免请求热路径创建无界 goroutine。
 		requestPayloadHash := service.HashUsageRequestPayload(body)
 		inboundEndpoint := GetInboundEndpoint(c)
-		upstreamEndpoint := GetUpstreamEndpoint(c, account.Platform)
+		upstreamEndpoint := GetUpstreamEndpoint(c, account.EffectivePlatform())
 		quotaPlatform := service.QuotaPlatform(c.Request.Context(), apiKey)
 		h.submitUsageRecordTask(c.Request.Context(), func(ctx context.Context) {
 			if err := h.gatewayService.RecordUsageWithLongContext(ctx, &service.RecordUsageLongContextInput{
@@ -651,7 +651,7 @@ func googleError(c *gin.Context, status int, message string) {
 	c.JSON(status, gin.H{
 		"error": gin.H{
 			"code":    status,
-			"message": message,
+			"message": localizeMessage(c, message),
 			"status":  googleapi.HTTPStatusToGoogleStatus(status),
 		},
 	})

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Wei-Shaw/LightBridge/internal/outbound"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/proxyurl"
 
 	"github.com/imroc/req/v3"
@@ -13,10 +14,11 @@ import (
 
 // reqClientOptions 定义 req 客户端的构建参数
 type reqClientOptions struct {
-	ProxyURL    string        // 代理 URL（支持 http/https/socks5）
-	Timeout     time.Duration // 请求超时时间
-	Impersonate bool          // 是否模拟 Chrome 浏览器指纹
-	ForceHTTP2  bool          // 是否强制使用 HTTP/2
+	ProxyURL         string // Deprecated: use ResolvedOutbound. 代理 URL（支持 http/https/socks5）
+	ResolvedOutbound *outbound.ResolvedOutbound
+	Timeout          time.Duration // 请求超时时间
+	Impersonate      bool          // 是否模拟 Chrome 浏览器指纹
+	ForceHTTP2       bool          // 是否强制使用 HTTP/2
 }
 
 // sharedReqClients 存储按配置参数缓存的 req 客户端实例
@@ -49,7 +51,8 @@ func getSharedReqClient(opts reqClientOptions) (*req.Client, error) {
 	if opts.Impersonate {
 		client = client.ImpersonateChrome()
 	}
-	trimmed, _, err := proxyurl.Parse(opts.ProxyURL)
+	proxyURL := outbound.ProxyURLFromResolved(opts.ProxyURL, opts.ResolvedOutbound)
+	trimmed, _, err := proxyurl.Parse(proxyURL)
 	if err != nil {
 		return nil, err
 	}
@@ -66,10 +69,24 @@ func getSharedReqClient(opts reqClientOptions) (*req.Client, error) {
 
 func buildReqClientKey(opts reqClientOptions) string {
 	return fmt.Sprintf("%s|%s|%t|%t",
-		strings.TrimSpace(opts.ProxyURL),
+		reqProxyKey(opts),
 		opts.Timeout.String(),
 		opts.Impersonate,
 		opts.ForceHTTP2,
+	)
+}
+
+func reqProxyKey(opts reqClientOptions) string {
+	resolved := opts.ResolvedOutbound
+	if resolved == nil {
+		return strings.TrimSpace(opts.ProxyURL)
+	}
+	return fmt.Sprintf("%s:%d:%s:%s:%s",
+		strings.TrimSpace(resolved.AdapterID),
+		resolved.ProfileID,
+		strings.TrimSpace(resolved.NodeName),
+		strings.TrimSpace(resolved.Mode),
+		strings.TrimSpace(resolved.ProxyURL),
 	)
 }
 

@@ -462,15 +462,23 @@ func (s *SchedulerSnapshotService) rebuildByAccount(ctx context.Context, account
 	}
 
 	var firstErr error
+	// 重建账号实际 DB 平台的 buckets（含 single/forced/mixed）。
+	// 对 Antigravity 账号而言 account.Platform=="gemini"，这一步覆盖 gemini 的各模式
+	// （含 gemini 混合 bucket）。
 	if err := s.rebuildBucketsForPlatform(ctx, account.Platform, groupIDs, reason, seen); err != nil && firstErr == nil {
 		firstErr = err
 	}
-	if account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled() {
-		if err := s.rebuildBucketsForPlatform(ctx, PlatformAnthropic, groupIDs, reason, seen); err != nil && firstErr == nil {
+	if account.IsAntigravity() {
+		// Antigravity 账号还服务于 "antigravity" 别名 bucket（/antigravity/* 强制路由），
+		// 该 bucket 的 platform 别名为 "antigravity"，不会被上面的 gemini 重建覆盖。
+		if err := s.rebuildBucketsForPlatform(ctx, PlatformAntigravity, groupIDs, reason, seen); err != nil && firstErr == nil {
 			firstErr = err
 		}
-		if err := s.rebuildBucketsForPlatform(ctx, PlatformGemini, groupIDs, reason, seen); err != nil && firstErr == nil {
-			firstErr = err
+		if account.IsMixedSchedulingEnabled() {
+			// 启用混合调度时，还会被纳入 anthropic 混合 bucket（gemini 混合已随上面覆盖）。
+			if err := s.rebuildBucketsForPlatform(ctx, PlatformAnthropic, groupIDs, reason, seen); err != nil && firstErr == nil {
+				firstErr = err
+			}
 		}
 	}
 	return firstErr
@@ -642,37 +650,41 @@ func (s *SchedulerSnapshotService) loadAccountsFromDB(ctx context.Context, bucke
 		groupID = 0
 	}
 
+	// 解析需查询的 DB platform 列表：Antigravity 账号现位于 gemini 平台之下，
+	// 故 antigravity / anthropic 混合等 bucket 需把别名翻译为实际 platform 查询。
+	queryPlatforms := schedulingQueryPlatforms(bucket.Platform, useMixed)
+	var accounts []Account
+	var err error
 	if useMixed {
-		platforms := []string{bucket.Platform, PlatformAntigravity}
-		var accounts []Account
-		var err error
 		if groupID > 0 {
-			accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatforms(ctx, groupID, platforms)
+			accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatforms(ctx, groupID, queryPlatforms)
 		} else if s.isRunModeSimple() {
-			accounts, err = s.accountRepo.ListSchedulableByPlatforms(ctx, platforms)
+			accounts, err = s.accountRepo.ListSchedulableByPlatforms(ctx, queryPlatforms)
 		} else {
-			accounts, err = s.accountRepo.ListSchedulableUngroupedByPlatforms(ctx, platforms)
+			accounts, err = s.accountRepo.ListSchedulableUngroupedByPlatforms(ctx, queryPlatforms)
 		}
-		if err != nil {
-			return nil, err
+	} else {
+		// 非混合：queryPlatforms 必为单元素，沿用单数仓库方法（与历史调用模式一致）。
+		qp := queryPlatforms[0]
+		if groupID > 0 {
+			accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatform(ctx, groupID, qp)
+		} else if s.isRunModeSimple() {
+			accounts, err = s.accountRepo.ListSchedulableByPlatform(ctx, qp)
+		} else {
+			accounts, err = s.accountRepo.ListSchedulableUngroupedByPlatform(ctx, qp)
 		}
-		filtered := make([]Account, 0, len(accounts))
-		for _, acc := range accounts {
-			if acc.Platform == PlatformAntigravity && !acc.IsMixedSchedulingEnabled() {
-				continue
-			}
-			filtered = append(filtered, acc)
+	}
+	if err != nil {
+		return nil, err
+	}
+	// 按 bucket 目标平台别名 + 是否混合调度过滤（统一处理 Gemini/Antigravity 合并语义）。
+	filtered := make([]Account, 0, len(accounts))
+	for i := range accounts {
+		if accountServesSchedulingPlatform(&accounts[i], bucket.Platform, useMixed) {
+			filtered = append(filtered, accounts[i])
 		}
-		return filtered, nil
 	}
-
-	if groupID > 0 {
-		return s.accountRepo.ListSchedulableByGroupIDAndPlatform(ctx, groupID, bucket.Platform)
-	}
-	if s.isRunModeSimple() {
-		return s.accountRepo.ListSchedulableByPlatform(ctx, bucket.Platform)
-	}
-	return s.accountRepo.ListSchedulableUngroupedByPlatform(ctx, bucket.Platform)
+	return filtered, nil
 }
 
 func (s *SchedulerSnapshotService) bucketFor(groupID *int64, platform string, mode string) SchedulerBucket {

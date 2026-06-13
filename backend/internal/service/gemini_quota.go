@@ -154,7 +154,7 @@ func (s *GeminiQuotaService) Policy(ctx context.Context) *GeminiQuotaPolicy {
 }
 
 func (s *GeminiQuotaService) QuotaForAccount(ctx context.Context, account *Account) (GeminiQuota, bool) {
-	if account == nil || account.Platform != PlatformGemini {
+	if account == nil || !account.IsPureGemini() {
 		return GeminiQuota{}, false
 	}
 
@@ -175,7 +175,7 @@ func (s *GeminiQuotaService) CooldownForTier(ctx context.Context, tierID string)
 }
 
 func (s *GeminiQuotaService) CooldownForAccount(ctx context.Context, account *Account) time.Duration {
-	if s == nil || account == nil || account.Platform != PlatformGemini {
+	if s == nil || account == nil || !account.IsPureGemini() {
 		return 5 * time.Minute
 	}
 	tierKey := geminiQuotaTierKeyForAccount(account)
@@ -370,7 +370,7 @@ func geminiCooldownForTier(tierID string) time.Duration {
 }
 
 func geminiQuotaTierKeyForAccount(account *Account) string {
-	if account == nil || account.Platform != PlatformGemini {
+	if account == nil || !account.IsPureGemini() {
 		return ""
 	}
 

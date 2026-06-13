@@ -90,6 +90,11 @@ func Type(v string) predicate.Account {
 	return predicate.Account(sql.FieldEQ(FieldType, v))
 }
 
+// SubPlatform applies equality check predicate on the "sub_platform" field. It's identical to SubPlatformEQ.
+func SubPlatform(v string) predicate.Account {
+	return predicate.Account(sql.FieldEQ(FieldSubPlatform, v))
+}
+
 // ProxyID applies equality check predicate on the "proxy_id" field. It's identical to ProxyIDEQ.
 func ProxyID(v int64) predicate.Account {
 	return predicate.Account(sql.FieldEQ(FieldProxyID, v))
@@ -583,6 +588,71 @@ func TypeEqualFold(v string) predicate.Account {
 // TypeContainsFold applies the ContainsFold predicate on the "type" field.
 func TypeContainsFold(v string) predicate.Account {
 	return predicate.Account(sql.FieldContainsFold(FieldType, v))
+}
+
+// SubPlatformEQ applies the EQ predicate on the "sub_platform" field.
+func SubPlatformEQ(v string) predicate.Account {
+	return predicate.Account(sql.FieldEQ(FieldSubPlatform, v))
+}
+
+// SubPlatformNEQ applies the NEQ predicate on the "sub_platform" field.
+func SubPlatformNEQ(v string) predicate.Account {
+	return predicate.Account(sql.FieldNEQ(FieldSubPlatform, v))
+}
+
+// SubPlatformIn applies the In predicate on the "sub_platform" field.
+func SubPlatformIn(vs ...string) predicate.Account {
+	return predicate.Account(sql.FieldIn(FieldSubPlatform, vs...))
+}
+
+// SubPlatformNotIn applies the NotIn predicate on the "sub_platform" field.
+func SubPlatformNotIn(vs ...string) predicate.Account {
+	return predicate.Account(sql.FieldNotIn(FieldSubPlatform, vs...))
+}
+
+// SubPlatformGT applies the GT predicate on the "sub_platform" field.
+func SubPlatformGT(v string) predicate.Account {
+	return predicate.Account(sql.FieldGT(FieldSubPlatform, v))
+}
+
+// SubPlatformGTE applies the GTE predicate on the "sub_platform" field.
+func SubPlatformGTE(v string) predicate.Account {
+	return predicate.Account(sql.FieldGTE(FieldSubPlatform, v))
+}
+
+// SubPlatformLT applies the LT predicate on the "sub_platform" field.
+func SubPlatformLT(v string) predicate.Account {
+	return predicate.Account(sql.FieldLT(FieldSubPlatform, v))
+}
+
+// SubPlatformLTE applies the LTE predicate on the "sub_platform" field.
+func SubPlatformLTE(v string) predicate.Account {
+	return predicate.Account(sql.FieldLTE(FieldSubPlatform, v))
+}
+
+// SubPlatformContains applies the Contains predicate on the "sub_platform" field.
+func SubPlatformContains(v string) predicate.Account {
+	return predicate.Account(sql.FieldContains(FieldSubPlatform, v))
+}
+
+// SubPlatformHasPrefix applies the HasPrefix predicate on the "sub_platform" field.
+func SubPlatformHasPrefix(v string) predicate.Account {
+	return predicate.Account(sql.FieldHasPrefix(FieldSubPlatform, v))
+}
+
+// SubPlatformHasSuffix applies the HasSuffix predicate on the "sub_platform" field.
+func SubPlatformHasSuffix(v string) predicate.Account {
+	return predicate.Account(sql.FieldHasSuffix(FieldSubPlatform, v))
+}
+
+// SubPlatformEqualFold applies the EqualFold predicate on the "sub_platform" field.
+func SubPlatformEqualFold(v string) predicate.Account {
+	return predicate.Account(sql.FieldEqualFold(FieldSubPlatform, v))
+}
+
+// SubPlatformContainsFold applies the ContainsFold predicate on the "sub_platform" field.
+func SubPlatformContainsFold(v string) predicate.Account {
+	return predicate.Account(sql.FieldContainsFold(FieldSubPlatform, v))
 }
 
 // ProxyIDEQ applies the EQ predicate on the "proxy_id" field.

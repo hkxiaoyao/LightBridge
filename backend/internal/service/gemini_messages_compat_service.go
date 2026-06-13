@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/LightBridge/internal/config"
+	"github.com/Wei-Shaw/LightBridge/internal/outbound"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/ctxkey"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/geminicli"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/googleapi"
@@ -53,6 +54,8 @@ type GeminiMessagesCompatService struct {
 	httpUpstream              HTTPUpstream
 	antigravityGatewayService *AntigravityGatewayService
 	cfg                       *config.Config
+	channelService            *ChannelService
+	outboundRegistry          *outbound.Registry
 	responseHeaderFilter      *responseheaders.CompiledHeaderFilter
 }
 
@@ -66,6 +69,8 @@ func NewGeminiMessagesCompatService(
 	httpUpstream HTTPUpstream,
 	antigravityGatewayService *AntigravityGatewayService,
 	cfg *config.Config,
+	channelService *ChannelService,
+	outboundRegistry *outbound.Registry,
 ) *GeminiMessagesCompatService {
 	return &GeminiMessagesCompatService{
 		accountRepo:               accountRepo,
@@ -77,6 +82,8 @@ func NewGeminiMessagesCompatService(
 		httpUpstream:              httpUpstream,
 		antigravityGatewayService: antigravityGatewayService,
 		cfg:                       cfg,
+		channelService:            channelService,
+		outboundRegistry:          outboundRegistry,
 		responseHeaderFilter:      compileResponseHeaderFilter(cfg),
 	}
 }
@@ -275,13 +282,7 @@ func (s *GeminiMessagesCompatService) isAccountUsableForRequestWithPrecheck(
 // isAccountValidForPlatform checks if account matches target platform.
 // Native platform matches directly; mixed scheduling mode requires antigravity to enable mixed_scheduling.
 func (s *GeminiMessagesCompatService) isAccountValidForPlatform(account *Account, platform string, useMixedScheduling bool) bool {
-	if account.Platform == platform {
-		return true
-	}
-	if useMixedScheduling && account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled() {
-		return true
-	}
-	return false
+	return accountServesSchedulingPlatform(account, platform, useMixedScheduling)
 }
 
 func (s *GeminiMessagesCompatService) passesRateLimitPreCheckWithCache(ctx context.Context, account *Account, requestedModel string, precheckResult map[int64]bool) bool {
@@ -395,7 +396,7 @@ func (s *GeminiMessagesCompatService) isBetterGeminiAccount(candidate, current *
 
 // isModelSupportedByAccount 根据账户平台检查模型支持
 func (s *GeminiMessagesCompatService) isModelSupportedByAccount(account *Account, requestedModel string) bool {
-	if account.Platform == PlatformAntigravity {
+	if account.IsAntigravity() {
 		if strings.TrimSpace(requestedModel) == "" {
 			return true
 		}
@@ -437,10 +438,9 @@ func (s *GeminiMessagesCompatService) listSchedulableAccountsOnce(ctx context.Co
 	}
 
 	useMixedScheduling := platform == PlatformGemini && !hasForcePlatform
-	queryPlatforms := []string{platform}
-	if useMixedScheduling {
-		queryPlatforms = []string{platform, PlatformAntigravity}
-	}
+	// Antigravity 账号现位于 gemini 平台之下：强制 antigravity 别名需翻译为查询 gemini，
+	// 再由调用方的 isAccountValidForPlatform 过滤。
+	queryPlatforms := schedulingQueryPlatforms(platform, useMixedScheduling)
 
 	if groupID != nil {
 		return s.accountRepo.ListSchedulableByGroupIDAndPlatforms(ctx, *groupID, queryPlatforms)
@@ -472,11 +472,18 @@ func (s *GeminiMessagesCompatService) validateUpstreamBaseURL(raw string) (strin
 
 // HasAntigravityAccounts 检查是否有可用的 antigravity 账户
 func (s *GeminiMessagesCompatService) HasAntigravityAccounts(ctx context.Context, groupID *int64) (bool, error) {
+	// 合并后 antigravity 账号位于 gemini 平台之下，listSchedulableAccountsOnce 会查询
+	// gemini 平台返回纯 Gemini + Antigravity，故此处需按 sub_platform 显式过滤。
 	accounts, err := s.listSchedulableAccountsOnce(ctx, groupID, PlatformAntigravity, false)
 	if err != nil {
 		return false, err
 	}
-	return len(accounts) > 0, nil
+	for i := range accounts {
+		if accounts[i].IsAntigravity() {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // SelectAccountForAIStudioEndpoints selects an account that is likely to succeed against
@@ -492,6 +499,16 @@ func (s *GeminiMessagesCompatService) SelectAccountForAIStudioEndpoints(ctx cont
 	if err != nil {
 		return nil, fmt.Errorf("query accounts failed: %w", err)
 	}
+	// AI Studio 端点（generativelanguage.googleapis.com）仅适用于原生 Gemini 账号。
+	// 合并后 listSchedulableAccountsOnce 查询 gemini 平台会同时返回 Antigravity 账号，
+	// 须在此排除（Antigravity 走 antigravity 上游，不能服务 AI Studio）。
+	pure := accounts[:0]
+	for i := range accounts {
+		if !accounts[i].IsAntigravity() {
+			pure = append(pure, accounts[i])
+		}
+	}
+	accounts = pure
 	if len(accounts) == 0 {
 		return nil, errors.New("no available Gemini accounts")
 	}
@@ -594,9 +611,9 @@ func (s *GeminiMessagesCompatService) Forward(ctx context.Context, c *gin.Contex
 	geminiReq = ensureGeminiFunctionCallThoughtSignatures(geminiReq)
 	originalClaudeBody := body
 
-	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err := s.resolveAccountProxyURL(ctx, account, account.Platform, apiKeyGroupID(getAPIKeyFromContext(c)))
+	if err != nil {
+		return nil, err
 	}
 
 	var requestIDHeader string
@@ -770,7 +787,7 @@ func (s *GeminiMessagesCompatService) Forward(ctx context.Context, c *gin.Contex
 		if err != nil {
 			safeErr := sanitizeUpstreamErrorMessage(err.Error())
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: 0,
@@ -808,7 +825,7 @@ func (s *GeminiMessagesCompatService) Forward(ctx context.Context, c *gin.Contex
 					upstreamDetail = truncateString(string(respBody), maxBytes)
 				}
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -891,7 +908,7 @@ func (s *GeminiMessagesCompatService) Forward(ctx context.Context, c *gin.Contex
 					upstreamDetail = truncateString(string(respBody), maxBytes)
 				}
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -946,7 +963,7 @@ func (s *GeminiMessagesCompatService) Forward(ctx context.Context, c *gin.Contex
 					upstreamDetail = truncateString(string(respBody), maxBytes)
 				}
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -980,7 +997,7 @@ func (s *GeminiMessagesCompatService) Forward(ctx context.Context, c *gin.Contex
 				}
 				log.Printf("[Gemini] status=400 google_config_error failover=true upstream_message=%q account=%d", upstreamMsg, account.ID)
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -1008,7 +1025,7 @@ func (s *GeminiMessagesCompatService) Forward(ctx context.Context, c *gin.Contex
 				upstreamDetail = truncateString(string(respBody), maxBytes)
 			}
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: resp.StatusCode,
@@ -1128,9 +1145,9 @@ func (s *GeminiMessagesCompatService) ForwardNative(ctx context.Context, c *gin.
 		mappedModel = account.GetMappedModel(originalModel)
 	}
 
-	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err := s.resolveAccountProxyURL(ctx, account, account.Platform, apiKeyGroupID(getAPIKeyFromContext(c)))
+	if err != nil {
+		return nil, err
 	}
 
 	useUpstreamStream := stream
@@ -1291,7 +1308,7 @@ func (s *GeminiMessagesCompatService) ForwardNative(ctx context.Context, c *gin.
 		if err != nil {
 			safeErr := sanitizeUpstreamErrorMessage(err.Error())
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: 0,
@@ -1359,7 +1376,7 @@ func (s *GeminiMessagesCompatService) ForwardNative(ctx context.Context, c *gin.
 					upstreamDetail = truncateString(string(respBody), maxBytes)
 				}
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -1453,7 +1470,7 @@ func (s *GeminiMessagesCompatService) ForwardNative(ctx context.Context, c *gin.
 					upstreamDetail = truncateString(string(evBody), maxBytes)
 				}
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -1484,7 +1501,7 @@ func (s *GeminiMessagesCompatService) ForwardNative(ctx context.Context, c *gin.
 				}
 				log.Printf("[Gemini] status=400 google_config_error failover=true upstream_message=%q account=%d", upstreamMsg, account.ID)
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -1509,7 +1526,7 @@ func (s *GeminiMessagesCompatService) ForwardNative(ctx context.Context, c *gin.
 				upstreamDetail = truncateString(string(evBody), maxBytes)
 			}
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: resp.StatusCode,
@@ -1535,7 +1552,7 @@ func (s *GeminiMessagesCompatService) ForwardNative(ctx context.Context, c *gin.
 		}
 		setOpsUpstreamError(c, resp.StatusCode, upstreamMsg, upstreamDetail)
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
+			Platform:           account.EffectivePlatform(),
 			AccountID:          account.ID,
 			AccountName:        account.Name,
 			UpstreamStatusCode: resp.StatusCode,
@@ -1700,7 +1717,7 @@ func (s *GeminiMessagesCompatService) writeGeminiMappedError(c *gin.Context, acc
 	}
 	setOpsUpstreamError(c, upstreamStatus, upstreamMsg, upstreamDetail)
 	appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-		Platform:           account.Platform,
+		Platform:           account.EffectivePlatform(),
 		AccountID:          account.ID,
 		AccountName:        account.Name,
 		UpstreamStatusCode: upstreamStatus,
@@ -2632,9 +2649,9 @@ func (s *GeminiMessagesCompatService) ForwardAIStudioGET(ctx context.Context, ac
 	}
 	fullURL := strings.TrimRight(normalizedBaseURL, "/") + path
 
-	var proxyURL string
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err := s.resolveAccountProxyURL(ctx, account, account.Platform, nil)
+	if err != nil {
+		return nil, err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)

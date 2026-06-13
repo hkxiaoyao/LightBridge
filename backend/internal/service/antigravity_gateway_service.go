@@ -20,6 +20,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Wei-Shaw/LightBridge/internal/outbound"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/antigravity"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
 	"github.com/gin-gonic/gin"
@@ -554,7 +555,7 @@ func (s *AntigravityGatewayService) handleSingleAccountRetryInPlace(
 func (s *AntigravityGatewayService) antigravityRetryLoop(p antigravityRetryLoopParams) (*antigravityRetryLoopResult, error) {
 	// 预检查：模型限流 + overages 启用 + 积分未耗尽 → 直接注入 AI Credits
 	overagesInjected := false
-	if p.requestedModel != "" && p.account.Platform == PlatformAntigravity &&
+	if p.requestedModel != "" && p.account.IsAntigravity() &&
 		p.account.IsOveragesEnabled() && !p.account.isCreditsExhausted() &&
 		p.account.isModelRateLimitedWithContext(p.ctx, p.requestedModel) {
 		if creditsBody := injectEnabledCreditTypes(p.body); creditsBody != nil {
@@ -873,6 +874,8 @@ type AntigravityGatewayService struct {
 	cache             GatewayCache // 用于模型级限流时清除粘性会话绑定
 	schedulerSnapshot *SchedulerSnapshotService
 	internal500Cache  Internal500CounterCache // INTERNAL 500 渐进惩罚计数器
+	channelService    *ChannelService
+	outboundRegistry  *outbound.Registry
 }
 
 func NewAntigravityGatewayService(
@@ -884,6 +887,8 @@ func NewAntigravityGatewayService(
 	httpUpstream HTTPUpstream,
 	settingService *SettingService,
 	internal500Cache Internal500CounterCache,
+	channelService *ChannelService,
+	outboundRegistry *outbound.Registry,
 ) *AntigravityGatewayService {
 	return &AntigravityGatewayService{
 		accountRepo:       accountRepo,
@@ -894,6 +899,8 @@ func NewAntigravityGatewayService(
 		cache:             cache,
 		schedulerSnapshot: schedulerSnapshot,
 		internal500Cache:  internal500Cache,
+		channelService:    channelService,
+		outboundRegistry:  outboundRegistry,
 	}
 }
 
@@ -1053,8 +1060,9 @@ func (s *AntigravityGatewayService) TestConnection(ctx context.Context, account 
 
 	// 代理 URL
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, nil)
+	if err != nil {
+		return nil, err
 	}
 
 	// 复用 antigravityRetryLoop：完整的重试 / credits overages / 智能重试
@@ -1371,8 +1379,9 @@ func (s *AntigravityGatewayService) Forward(ctx context.Context, c *gin.Context,
 
 	// 代理 URL
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, apiKeyGroupID(getAPIKeyFromContext(c)))
+	if err != nil {
+		return nil, err
 	}
 
 	// 获取转换选项
@@ -1438,7 +1447,7 @@ func (s *AntigravityGatewayService) Forward(ctx context.Context, c *gin.Context,
 			logBody, maxBytes := s.getLogConfig()
 			upstreamDetail := s.getUpstreamErrorDetail(respBody)
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: resp.StatusCode,
@@ -1495,7 +1504,7 @@ func (s *AntigravityGatewayService) Forward(ctx context.Context, c *gin.Context,
 				})
 				if retryErr != nil {
 					appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-						Platform:           account.Platform,
+						Platform:           account.EffectivePlatform(),
 						AccountID:          account.ID,
 						AccountName:        account.Name,
 						UpstreamStatusCode: 0,
@@ -1534,7 +1543,7 @@ func (s *AntigravityGatewayService) Forward(ctx context.Context, c *gin.Context,
 					retryUpstreamDetail = truncateString(string(retryBody), maxBytes)
 				}
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: retryResp.StatusCode,
@@ -1570,7 +1579,7 @@ func (s *AntigravityGatewayService) Forward(ctx context.Context, c *gin.Context,
 			errMsg := strings.TrimSpace(extractAntigravityErrorMessage(respBody))
 			if isThinkingBudgetConstraintError(errMsg) && s.settingService.IsBudgetRectifierEnabled(ctx) {
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -1651,7 +1660,7 @@ func (s *AntigravityGatewayService) Forward(ctx context.Context, c *gin.Context,
 					logger.LegacyPrintf("service.antigravity_gateway", "%s status=400 prompt_too_long=true upstream_message=%q request_id=%s body=%s", prefix, upstreamMsg, resp.Header.Get("x-request-id"), truncateForLog(respBody, maxBytes))
 				}
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -1677,7 +1686,7 @@ func (s *AntigravityGatewayService) Forward(ctx context.Context, c *gin.Context,
 					upstreamDetail := s.getUpstreamErrorDetail(respBody)
 					log.Printf("%s status=400 google_config_error failover=true upstream_message=%q account=%d", prefix, upstreamMsg, account.ID)
 					appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-						Platform:           account.Platform,
+						Platform:           account.EffectivePlatform(),
 						AccountID:          account.ID,
 						AccountName:        account.Name,
 						UpstreamStatusCode: resp.StatusCode,
@@ -1695,7 +1704,7 @@ func (s *AntigravityGatewayService) Forward(ctx context.Context, c *gin.Context,
 				upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
 				upstreamDetail := s.getUpstreamErrorDetail(respBody)
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -2119,8 +2128,9 @@ func (s *AntigravityGatewayService) ForwardGemini(ctx context.Context, c *gin.Co
 
 	// 代理 URL
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, apiKeyGroupID(getAPIKeyFromContext(c)))
+	if err != nil {
+		return nil, err
 	}
 
 	// Antigravity 上游要求必须包含身份提示词，注入到请求中
@@ -2232,7 +2242,7 @@ func (s *AntigravityGatewayService) ForwardGemini(ctx context.Context, c *gin.Co
 			upstreamMsg := sanitizeUpstreamErrorMessage(strings.TrimSpace(extractAntigravityErrorMessage(signatureCheckBody)))
 			upstreamDetail := s.getUpstreamErrorDetail(signatureCheckBody)
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: resp.StatusCode,
@@ -2277,7 +2287,7 @@ func (s *AntigravityGatewayService) ForwardGemini(ctx context.Context, c *gin.Co
 							retryOpsBody = retryUnwrapped
 						}
 						appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-							Platform:           account.Platform,
+							Platform:           account.EffectivePlatform(),
 							AccountID:          account.ID,
 							AccountName:        account.Name,
 							UpstreamStatusCode: retryResp.StatusCode,
@@ -2297,7 +2307,7 @@ func (s *AntigravityGatewayService) ForwardGemini(ctx context.Context, c *gin.Co
 				} else {
 					if switchErr, ok := IsAntigravityAccountSwitchError(retryErr); ok {
 						appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-							Platform:           account.Platform,
+							Platform:           account.EffectivePlatform(),
 							AccountID:          account.ID,
 							AccountName:        account.Name,
 							UpstreamStatusCode: http.StatusServiceUnavailable,
@@ -2310,7 +2320,7 @@ func (s *AntigravityGatewayService) ForwardGemini(ctx context.Context, c *gin.Co
 						}
 					}
 					appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-						Platform:           account.Platform,
+						Platform:           account.EffectivePlatform(),
 						AccountID:          account.ID,
 						AccountName:        account.Name,
 						UpstreamStatusCode: 0,
@@ -2351,7 +2361,7 @@ func (s *AntigravityGatewayService) ForwardGemini(ctx context.Context, c *gin.Co
 		if resp.StatusCode == http.StatusBadRequest && isGoogleProjectConfigError(strings.ToLower(upstreamMsg)) {
 			log.Printf("%s status=400 google_config_error failover=true upstream_message=%q account=%d", prefix, upstreamMsg, account.ID)
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: resp.StatusCode,
@@ -2365,7 +2375,7 @@ func (s *AntigravityGatewayService) ForwardGemini(ctx context.Context, c *gin.Co
 
 		if s.shouldFailoverUpstreamError(resp.StatusCode) {
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: resp.StatusCode,
@@ -2380,7 +2390,7 @@ func (s *AntigravityGatewayService) ForwardGemini(ctx context.Context, c *gin.Co
 			contentType = "application/json"
 		}
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
+			Platform:           account.EffectivePlatform(),
 			AccountID:          account.ID,
 			AccountName:        account.Name,
 			UpstreamStatusCode: resp.StatusCode,
@@ -2695,7 +2705,7 @@ func parseAntigravitySmartRetryInfo(body []byte) *antigravitySmartRetryInfo {
 //   - modelName: 限流的模型名称
 //   - isModelCapacityExhausted: 是否为模型容量不足（MODEL_CAPACITY_EXHAUSTED）
 func shouldTriggerAntigravitySmartRetry(account *Account, respBody []byte) (shouldRetry bool, shouldRateLimitModel bool, waitDuration time.Duration, modelName string, isModelCapacityExhausted bool) {
-	if account.Platform != PlatformAntigravity {
+	if !account.IsAntigravity() {
 		return false, false, 0, "", false
 	}
 
@@ -3585,7 +3595,7 @@ func (s *AntigravityGatewayService) writeMappedClaudeError(c *gin.Context, accou
 	upstreamDetail := s.getUpstreamErrorDetail(body)
 	setOpsUpstreamError(c, upstreamStatus, upstreamMsg, upstreamDetail)
 	appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-		Platform:           account.Platform,
+		Platform:           account.EffectivePlatform(),
 		AccountID:          account.ID,
 		AccountName:        account.Name,
 		UpstreamStatusCode: upstreamStatus,
@@ -4238,8 +4248,9 @@ func (s *AntigravityGatewayService) ForwardUpstream(ctx context.Context, c *gin.
 
 	// 代理 URL
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, apiKeyGroupID(getAPIKeyFromContext(c)))
+	if err != nil {
+		return nil, err
 	}
 
 	// 发送请求

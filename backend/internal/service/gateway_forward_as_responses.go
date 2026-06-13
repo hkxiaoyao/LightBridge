@@ -110,8 +110,11 @@ func (s *GatewayService) ForwardAsResponses(
 
 	// 9. Get proxy URL
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	if !account.IsCustomBaseURLEnabled() || account.GetCustomBaseURL() == "" {
+		proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, apiKeyGroupID(getAPIKeyFromContext(c)))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// 10. Build upstream request
@@ -131,7 +134,7 @@ func (s *GatewayService) ForwardAsResponses(
 		safeErr := sanitizeUpstreamErrorMessage(err.Error())
 		setOpsUpstreamError(c, 0, safeErr, "")
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
+			Platform:           account.EffectivePlatform(),
 			AccountID:          account.ID,
 			AccountName:        account.Name,
 			UpstreamStatusCode: 0,
@@ -154,7 +157,7 @@ func (s *GatewayService) ForwardAsResponses(
 
 		if s.shouldFailoverUpstreamError(resp.StatusCode) {
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: resp.StatusCode,

@@ -362,7 +362,7 @@ func (s *TokenRefreshService) refreshWithRetry(ctx context.Context, account *Acc
 // postRefreshActions 刷新成功后的后续动作（清除错误状态、缓存失效、调度器同步等）
 func (s *TokenRefreshService) postRefreshActions(ctx context.Context, account *Account) {
 	// Antigravity 账户：如果之前是因为缺少 project_id 而标记为 error，现在成功获取到了，清除错误状态
-	if account.Platform == PlatformAntigravity &&
+	if account.IsAntigravity() &&
 		account.Status == StatusError &&
 		strings.Contains(account.ErrorMessage, "missing_project_id:") {
 		if clearErr := s.accountRepo.ClearError(ctx, account.ID); clearErr != nil {
@@ -499,7 +499,7 @@ func (s *TokenRefreshService) ensureOpenAIPrivacy(ctx context.Context, account *
 // 仅当 privacy_mode 已成功设置（"privacy_set"）时跳过；
 // 未设置或之前失败（"privacy_set_failed"）均会重试。
 func (s *TokenRefreshService) ensureAntigravityPrivacy(ctx context.Context, account *Account) {
-	if account.Platform != PlatformAntigravity || account.Type != AccountTypeOAuth {
+	if !account.IsAntigravity() || account.Type != AccountTypeOAuth {
 		return
 	}
 	if account.Extra != nil {

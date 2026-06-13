@@ -30,11 +30,19 @@ type ModuleService struct {
 	installer               modules.Installer
 	moduleVerifier          modules.InstalledVerifier
 	providerRuntime         modules.ProviderRuntime
+	outboundRuntime         modules.OutboundRuntime
 	providerRegistry        *modules.ProviderRegistry
 	moduleDataDir           string
 	marketplaceRegistryPath string
 	marketplaceRegistryURL  string
 	marketplaceTimeout      time.Duration
+}
+
+func (s *ModuleService) SetOutboundRuntime(runtime modules.OutboundRuntime) {
+	if s == nil {
+		return
+	}
+	s.outboundRuntime = runtime
 }
 
 func NewModuleService(store modules.Store) *ModuleService {
@@ -46,6 +54,7 @@ func ProvideModuleService(
 	store modules.Store,
 	installer modules.Installer,
 	providerRuntime modules.ProviderRuntime,
+	outboundRuntime modules.OutboundRuntime,
 	providerRegistry *modules.ProviderRegistry,
 ) *ModuleService {
 	dataDir := "data"
@@ -71,11 +80,15 @@ func ProvideModuleService(
 		installer:               installer,
 		moduleVerifier:          moduleVerifier,
 		providerRuntime:         providerRuntime,
+		outboundRuntime:         outboundRuntime,
 		providerRegistry:        providerRegistry,
 		moduleDataDir:           dataDir,
 		marketplaceRegistryPath: marketplaceRegistryPath,
 		marketplaceRegistryURL:  marketplaceRegistryURL,
 		marketplaceTimeout:      marketplaceTimeout,
+	}
+	if err := svc.AutoInstallManagedProviderModules(context.Background()); err != nil {
+		slog.Error("failed to auto install managed provider modules", "error", err)
 	}
 	if err := svc.StartEnabledModules(context.Background()); err != nil {
 		slog.Error("failed to restore enabled modules", "error", err)
@@ -176,7 +189,7 @@ func (s *ModuleService) ProviderAdapters(context.Context) ([]ModuleProviderAdapt
 }
 
 func (s *ModuleService) StartEnabledModules(ctx context.Context) error {
-	if s == nil || s.providerRuntime == nil {
+	if s == nil || (s.providerRuntime == nil && s.outboundRuntime == nil) {
 		return nil
 	}
 	installed, err := s.store.ListInstalled(ctx)
@@ -194,7 +207,7 @@ func (s *ModuleService) StartEnabledModules(ctx context.Context) error {
 			failures = append(failures, item.ID+": "+err.Error())
 			continue
 		}
-		if err := s.providerRuntime.StartProvider(ctx, *verified); err != nil {
+		if err := s.startModuleRuntime(ctx, *verified); err != nil {
 			_ = s.store.SetStatus(ctx, item.ID, modules.ModuleStatusFailed, err.Error())
 			failures = append(failures, item.ID+": "+err.Error())
 		}
@@ -247,6 +260,9 @@ func (s *ModuleService) Marketplace(ctx context.Context) (*ModuleMarketplaceResu
 		if item, ok := installedByID[entry.ID]; ok {
 			entry.InstalledStatus = item.Status
 			entry.InstalledVersion = item.Version
+		}
+		if isManagedProviderMarketplaceEntry(entry) {
+			continue
 		}
 		result.Modules = append(result.Modules, entry)
 	}
@@ -307,6 +323,111 @@ func (s *ModuleService) InstallFromMarketplace(ctx context.Context, moduleID str
 		}
 	}
 	return s.InstallArchive(ctx, archivePath)
+}
+
+func (s *ModuleService) AutoInstallManagedProviderModules(ctx context.Context) error {
+	if s == nil || s.store == nil || s.installer == nil {
+		return nil
+	}
+	registry, err := s.loadMarketplaceRegistry(ctx)
+	if err != nil {
+		return err
+	}
+	if registry == nil {
+		return nil
+	}
+	installed, err := s.store.ListInstalled(ctx)
+	if err != nil {
+		return err
+	}
+	installedByID := make(map[string]modules.InstalledModule, len(installed))
+	for _, item := range installed {
+		installedByID[item.ID] = item
+	}
+	latestByID := make(map[string]ModuleMarketplaceEntry)
+	for _, entry := range registry.Modules {
+		entry.normalize()
+		if err := validateMarketplaceEntry(entry); err != nil {
+			return infraerrors.BadRequest("MODULE_MARKETPLACE_INVALID_ENTRY", "module marketplace registry contains an invalid entry").WithCause(err)
+		}
+		if !isManagedProviderMarketplaceEntry(entry) {
+			continue
+		}
+		current, ok := latestByID[entry.ID]
+		if !ok {
+			latestByID[entry.ID] = entry
+			continue
+		}
+		cmp, err := compareModuleVersionStrings(entry.Version, current.Version)
+		if err != nil {
+			return infraerrors.BadRequest("MODULE_VERSION_INVALID", "managed provider module versions must be semantic versions").WithCause(err)
+		}
+		if cmp > 0 {
+			latestByID[entry.ID] = entry
+		}
+	}
+	ids := make([]string, 0, len(latestByID))
+	for id := range latestByID {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	var failures []error
+	for _, id := range ids {
+		entry := latestByID[id]
+		if err := s.ensureManagedProviderModuleInstalled(ctx, entry, installedByID[id]); err != nil {
+			failures = append(failures, fmt.Errorf("%s@%s: %w", entry.ID, entry.Version, err))
+		}
+	}
+	return errors.Join(failures...)
+}
+
+func (s *ModuleService) ensureManagedProviderModuleInstalled(ctx context.Context, entry ModuleMarketplaceEntry, installed modules.InstalledModule) error {
+	if installed.ID != "" && installed.Status != modules.ModuleStatusUninstalled && installed.Status != modules.ModuleStatusPurged {
+		cmp, err := compareModuleVersionStrings(entry.Version, installed.Version)
+		if err == nil && cmp <= 0 {
+			if installed.Status == modules.ModuleStatusEnabled {
+				return nil
+			}
+			if err := s.store.ApprovePermissions(ctx, installed.ID); err != nil {
+				return err
+			}
+			return s.store.SetStatus(ctx, installed.ID, modules.ModuleStatusEnabled, "")
+		}
+	}
+	next, err := s.InstallFromMarketplace(ctx, entry.ID, entry.Version)
+	if err != nil {
+		return err
+	}
+	if err := s.store.ApprovePermissions(ctx, next.ID); err != nil {
+		return err
+	}
+	return s.store.SetStatus(ctx, next.ID, modules.ModuleStatusEnabled, "")
+}
+
+var managedProviderModuleIDs = map[string]struct{}{
+	"anthropic":       {},
+	"anthropic-oauth": {},
+	"claude":          {},
+	"claude-oauth":    {},
+	"gemini":          {},
+	"gemini-oauth":    {},
+	"openai":          {},
+	"openai-oauth":    {},
+}
+
+func isManagedProviderMarketplaceEntry(entry ModuleMarketplaceEntry) bool {
+	if entry.Type != modules.ModuleTypeProvider {
+		return false
+	}
+	if _, ok := managedProviderModuleIDs[strings.ToLower(strings.TrimSpace(entry.ID))]; !ok {
+		return false
+	}
+	for _, capability := range entry.Capabilities {
+		if capability == modules.CapabilityProviderAdapter {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *ModuleService) UpgradeFromMarketplace(ctx context.Context, moduleID string, version string) (*modules.InstalledModule, error) {
@@ -471,7 +592,7 @@ func validateMarketplaceEntry(entry ModuleMarketplaceEntry) error {
 	}
 	if err := modules.ValidateManifest(manifest); err == nil {
 		return nil
-	} else if !strings.Contains(err.Error(), "provider.adapter requires backend spec") {
+	} else if !strings.Contains(err.Error(), "provider.adapter requires backend spec") && !strings.Contains(err.Error(), "outbound.adapter requires backend spec") {
 		return err
 	}
 	return nil
@@ -729,13 +850,13 @@ func (s *ModuleService) Enable(ctx context.Context, id string) (*modules.Install
 	if err := s.requirePermissionsApproved(ctx, id); err != nil {
 		return nil, err
 	}
-	if s.providerRuntime != nil {
+	if s.providerRuntime != nil || s.outboundRuntime != nil {
 		verified, err := s.verifiedModuleForStart(ctx, *current)
 		if err != nil {
 			_ = s.store.SetStatus(ctx, id, modules.ModuleStatusFailed, err.Error())
 			return nil, infraerrors.ServiceUnavailable("MODULE_PACKAGE_VERIFY_FAILED", "module package failed verification before runtime start").WithCause(err)
 		}
-		if err := s.providerRuntime.StartProvider(ctx, *verified); err != nil {
+		if err := s.startModuleRuntime(ctx, *verified); err != nil {
 			_ = s.store.SetStatus(ctx, id, modules.ModuleStatusFailed, err.Error())
 			return nil, infraerrors.ServiceUnavailable("MODULE_RUNTIME_START_FAILED", "module runtime failed to start").WithCause(err)
 		}
@@ -907,13 +1028,38 @@ func pathInsideDirectory(root string, target string) bool {
 }
 
 func (s *ModuleService) stopModuleRuntime(ctx context.Context, id string) error {
-	if s.providerRuntime == nil {
-		return nil
+	var failures []error
+	if s.providerRuntime != nil {
+		if err := s.providerRuntime.StopProvider(ctx, id); err != nil {
+			failures = append(failures, err)
+		}
 	}
-	if err := s.providerRuntime.StopProvider(ctx, id); err != nil {
-		return infraerrors.ServiceUnavailable("MODULE_RUNTIME_STOP_FAILED", "module runtime failed to stop").WithCause(err)
+	if s.outboundRuntime != nil {
+		if err := s.outboundRuntime.StopOutbound(ctx, id); err != nil {
+			failures = append(failures, err)
+		}
+	}
+	if len(failures) > 0 {
+		return infraerrors.ServiceUnavailable("MODULE_RUNTIME_STOP_FAILED", "module runtime failed to stop").WithCause(errors.Join(failures...))
 	}
 	return nil
+}
+
+func (s *ModuleService) startModuleRuntime(ctx context.Context, module modules.InstalledModule) error {
+	switch module.Type {
+	case modules.ModuleTypeProvider:
+		if s.providerRuntime == nil {
+			return nil
+		}
+		return s.providerRuntime.StartProvider(ctx, module)
+	case modules.ModuleTypeOutbound:
+		if s.outboundRuntime == nil {
+			return nil
+		}
+		return s.outboundRuntime.StartOutbound(ctx, module)
+	default:
+		return fmt.Errorf("unsupported module type %q", module.Type)
+	}
 }
 
 func (s *ModuleService) verifiedModuleForStart(ctx context.Context, module modules.InstalledModule) (*modules.InstalledModule, error) {

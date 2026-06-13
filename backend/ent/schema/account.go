@@ -71,6 +71,15 @@ func (Account) Fields() []ent.Field {
 			MaxLen(20).
 			NotEmpty(),
 
+		// sub_platform: 同一 platform 下的子平台/账号变体判别符。
+		// 目前用于在 "gemini" 平台下标识 Antigravity 账号（sub_platform="antigravity"）。
+		// 空字符串表示原生平台账号（如纯 Gemini / 其他平台）。
+		// 该字段与 type（oauth/apikey/upstream）正交：Antigravity 账号仍可为
+		// 任意 type，故无法用 type 字段区分，需独立的 sub_platform。
+		field.String("sub_platform").
+			MaxLen(50).
+			Default(""),
+
 		// credentials: 认证凭证，以 JSONB 格式存储
 		// 结构取决于 type 字段：
 		// - api_key: {"api_key": "sk-xxx"}
@@ -219,6 +228,7 @@ func (Account) Edges() []ent.Edge {
 func (Account) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("platform"),            // 按平台筛选
+		index.Fields("sub_platform"),        // 按子平台筛选（如 Antigravity）
 		index.Fields("type"),                // 按认证类型筛选
 		index.Fields("status"),              // 按状态筛选
 		index.Fields("proxy_id"),            // 按代理筛选

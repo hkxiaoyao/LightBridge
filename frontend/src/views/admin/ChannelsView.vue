@@ -269,6 +269,13 @@
                 />
               </div>
             </div>
+
+            <ProxyPolicyPanel
+              v-if="editingChannel"
+              entity-type="channel"
+              :entity-id="editingChannel.id"
+              title="Channel Proxy Policy"
+            />
           </div>
 
           <!-- Platform Tab Content -->
@@ -648,6 +655,7 @@ import Icon from '@/components/icons/Icon.vue'
 import PlatformIcon from '@/components/common/PlatformIcon.vue'
 import Toggle from '@/components/common/Toggle.vue'
 import PricingEntryCard from '@/components/admin/channel/PricingEntryCard.vue'
+import ProxyPolicyPanel from '@/components/admin/proxy/ProxyPolicyPanel.vue'
 import { getPersistedPageSize } from '@/composables/usePersistedPageSize'
 import { useKeyedDebouncedSearch } from '@/composables/useKeyedDebouncedSearch'
 

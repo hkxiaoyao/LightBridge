@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Wei-Shaw/LightBridge/internal/outbound"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/proxyurl"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/proxyutil"
 	"github.com/Wei-Shaw/LightBridge/internal/util/urlvalidator"
@@ -40,7 +41,8 @@ const (
 
 // Options 定义共享 HTTP 客户端的构建参数
 type Options struct {
-	ProxyURL              string        // 代理 URL（支持 http/https/socks5/socks5h）
+	ProxyURL              string // Deprecated: use ResolvedOutbound. 代理 URL（支持 http/https/socks5/socks5h）
+	ResolvedOutbound      *outbound.ResolvedOutbound
 	Timeout               time.Duration // 请求总超时时间
 	ResponseHeaderTimeout time.Duration // 等待响应头超时时间
 	InsecureSkipVerify    bool          // 是否跳过 TLS 证书验证（已禁用，不允许设置为 true）
@@ -126,7 +128,8 @@ func buildTransport(opts Options) (*http.Transport, error) {
 		return nil, fmt.Errorf("insecure_skip_verify is not allowed; install a trusted certificate instead")
 	}
 
-	_, parsed, err := proxyurl.Parse(opts.ProxyURL)
+	proxyURL := outbound.ProxyURLFromResolved(opts.ProxyURL, opts.ResolvedOutbound)
+	_, parsed, err := proxyurl.Parse(proxyURL)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +146,7 @@ func buildTransport(opts Options) (*http.Transport, error) {
 
 func buildClientKey(opts Options) string {
 	return fmt.Sprintf("%s|%s|%s|%t|%t|%t|%d|%d|%d",
-		strings.TrimSpace(opts.ProxyURL),
+		clientProxyKey(opts),
 		opts.Timeout.String(),
 		opts.ResponseHeaderTimeout.String(),
 		opts.InsecureSkipVerify,
@@ -152,6 +155,20 @@ func buildClientKey(opts Options) string {
 		opts.MaxIdleConns,
 		opts.MaxIdleConnsPerHost,
 		opts.MaxConnsPerHost,
+	)
+}
+
+func clientProxyKey(opts Options) string {
+	resolved := opts.ResolvedOutbound
+	if resolved == nil {
+		return strings.TrimSpace(opts.ProxyURL)
+	}
+	return fmt.Sprintf("%s:%d:%s:%s:%s",
+		strings.TrimSpace(resolved.AdapterID),
+		resolved.ProfileID,
+		strings.TrimSpace(resolved.NodeName),
+		strings.TrimSpace(resolved.Mode),
+		strings.TrimSpace(resolved.ProxyURL),
 	)
 }
 

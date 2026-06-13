@@ -169,7 +169,7 @@ func (s *OpsService) GetConcurrencyStats(
 			info := &AccountConcurrencyInfo{
 				AccountID:      acc.ID,
 				AccountName:    acc.Name,
-				Platform:       acc.Platform,
+				Platform:       acc.EffectivePlatform(),
 				GroupID:        displayGroupID,
 				GroupName:      displayGroupName,
 				CurrentInUse:   currentInUse,
@@ -186,7 +186,7 @@ func (s *OpsService) GetConcurrencyStats(
 		if acc.Platform != "" {
 			if _, ok := platform[acc.Platform]; !ok {
 				platform[acc.Platform] = &PlatformConcurrencyInfo{
-					Platform: acc.Platform,
+					Platform: acc.EffectivePlatform(),
 				}
 			}
 			p := platform[acc.Platform]

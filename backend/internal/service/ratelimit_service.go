@@ -230,7 +230,7 @@ func (s *RateLimitService) HandleUpstreamError(ctx context.Context, account *Acc
 		}
 		// OAuth 账号在 401 错误时临时不可调度（给 token 刷新窗口）；非 OAuth 账号保持原有 SetError 行为。
 		// Antigravity 除外：其 401 由 applyErrorPolicy 的 temp_unschedulable_rules 自行控制。
-		if account.Type == AccountTypeOAuth && account.Platform != PlatformAntigravity {
+		if account.Type == AccountTypeOAuth && !account.IsAntigravity() {
 			// 1. 失效缓存
 			if s.tokenCacheInvalidator != nil {
 				if err := s.tokenCacheInvalidator.InvalidateToken(ctx, account); err != nil {
@@ -336,7 +336,7 @@ func (s *RateLimitService) HandleUpstreamError(ctx context.Context, account *Acc
 // PreCheckUsage proactively checks local quota before dispatching a request.
 // Returns false when the account should be skipped.
 func (s *RateLimitService) PreCheckUsage(ctx context.Context, account *Account, requestedModel string) (bool, error) {
-	if account == nil || account.Platform != PlatformGemini {
+	if account == nil || !account.IsPureGemini() {
 		return true, nil
 	}
 	if s.usageRepo == nil || s.geminiQuotaService == nil {
@@ -475,7 +475,7 @@ func (s *RateLimitService) PreCheckUsageBatch(ctx context.Context, accounts []*A
 	}
 	quotaAccounts := make([]quotaAccount, 0, len(accounts))
 	for _, account := range accounts {
-		if account == nil || account.Platform != PlatformGemini {
+		if account == nil || !account.IsPureGemini() {
 			continue
 		}
 		quota, ok := s.geminiQuotaService.QuotaForAccount(ctx, account)
@@ -741,7 +741,7 @@ func buildForbiddenErrorMessage(prefix string, upstreamMsg string, responseBody 
 // Antigravity 平台区分 validation/violation/generic 三种类型，均 SetError 永久禁用；
 // 其他平台保持原有 SetError 行为。
 func (s *RateLimitService) handle403(ctx context.Context, account *Account, upstreamMsg string, responseBody []byte) (shouldDisable bool) {
-	if account.Platform == PlatformAntigravity {
+	if account.IsAntigravity() {
 		return s.handleAntigravity403(ctx, account, upstreamMsg, responseBody)
 	}
 	if account.Platform == PlatformOpenAI {
@@ -1651,7 +1651,7 @@ func modelRateLimitKeyForUpstreamModelNotFound(ctx context.Context, account *Acc
 	if account == nil || modelKey == "" {
 		return modelKey
 	}
-	if account.Platform == PlatformAntigravity {
+	if account.IsAntigravity() {
 		if resolved := strings.TrimSpace(resolveFinalAntigravityModelKey(ctx, account, modelKey)); resolved != "" {
 			return resolved
 		}
@@ -1673,7 +1673,7 @@ func (s *RateLimitService) tryTempUnschedulable(ctx context.Context, account *Ac
 	// 401 首次命中可临时不可调度（给 token 刷新窗口）；
 	// 若历史上已因 401 进入过临时不可调度，则本次应升级为 error（返回 false 交由默认错误逻辑处理）。
 	// Antigravity 跳过：其 401 由 applyErrorPolicy 的 temp_unschedulable_rules 自行控制，无需升级逻辑。
-	if statusCode == http.StatusUnauthorized && account.Platform != PlatformAntigravity {
+	if statusCode == http.StatusUnauthorized && !account.IsAntigravity() {
 		reason := account.TempUnschedulableReason
 		// 缓存可能没有 reason，从 DB 回退读取
 		if reason == "" {

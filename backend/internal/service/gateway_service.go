@@ -26,6 +26,7 @@ import (
 
 	"github.com/Wei-Shaw/LightBridge/internal/config"
 	"github.com/Wei-Shaw/LightBridge/internal/modules"
+	"github.com/Wei-Shaw/LightBridge/internal/outbound"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/claude"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/ctxkey"
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
@@ -621,6 +622,7 @@ type GatewayService struct {
 	balanceNotifyService  *BalanceNotifyService
 	userPlatformQuotaRepo UserPlatformQuotaRepository
 	providerRegistry      *modules.ProviderRegistry
+	outboundRegistry      *outbound.Registry
 }
 
 // NewGatewayService creates a new GatewayService
@@ -652,6 +654,7 @@ func NewGatewayService(
 	resolver *ModelPricingResolver,
 	balanceNotifyService *BalanceNotifyService,
 	userPlatformQuotaRepo UserPlatformQuotaRepository,
+	outboundRegistry *outbound.Registry,
 ) *GatewayService {
 	userGroupRateTTL := resolveUserGroupRateCacheTTL(cfg)
 	modelsListTTL := resolveModelsListCacheTTL(cfg)
@@ -688,6 +691,7 @@ func NewGatewayService(
 		resolver:              resolver,
 		balanceNotifyService:  balanceNotifyService,
 		userPlatformQuotaRepo: userPlatformQuotaRepo,
+		outboundRegistry:      outboundRegistry,
 	}
 	svc.userGroupRateResolver = newUserGroupRateResolver(
 		userGroupRateRepo,
@@ -2301,57 +2305,30 @@ func (s *GatewayService) listSchedulableAccounts(ctx context.Context, groupID *i
 		return accounts, useMixed, err
 	}
 	useMixed := (platform == PlatformAnthropic || platform == PlatformGemini) && !hasForcePlatform
-	if useMixed {
-		platforms := []string{platform, PlatformAntigravity}
-		var accounts []Account
-		var err error
-		if groupID != nil {
-			accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatforms(ctx, *groupID, platforms)
-		} else if s.cfg != nil && s.cfg.RunMode == config.RunModeSimple {
-			accounts, err = s.accountRepo.ListSchedulableByPlatforms(ctx, platforms)
-		} else {
-			accounts, err = s.accountRepo.ListSchedulableUngroupedByPlatforms(ctx, platforms)
-		}
-		if err != nil {
-			slog.Debug("account_scheduling_list_failed",
-				"group_id", derefGroupID(groupID),
-				"platform", platform,
-				"error", err)
-			return nil, useMixed, err
-		}
-		filtered := make([]Account, 0, len(accounts))
-		for _, acc := range accounts {
-			if acc.Platform == PlatformAntigravity && !acc.IsMixedSchedulingEnabled() {
-				continue
-			}
-			filtered = append(filtered, acc)
-		}
-		slog.Debug("account_scheduling_list_mixed",
-			"group_id", derefGroupID(groupID),
-			"platform", platform,
-			"raw_count", len(accounts),
-			"filtered_count", len(filtered))
-		for _, acc := range filtered {
-			slog.Debug("account_scheduling_account_detail",
-				"account_id", acc.ID,
-				"name", acc.Name,
-				"platform", acc.Platform,
-				"type", acc.Type,
-				"status", acc.Status,
-				"tls_fingerprint", acc.IsTLSFingerprintEnabled())
-		}
-		return filtered, useMixed, nil
-	}
-
+	// 解析需查询的 DB platform 列表（Antigravity 账号现位于 gemini 平台之下，
+	// 故强制 antigravity / anthropic 混合等场景需把别名翻译为实际 platform）。
+	queryPlatforms := schedulingQueryPlatforms(platform, useMixed)
 	var accounts []Account
 	var err error
-	if s.cfg != nil && s.cfg.RunMode == config.RunModeSimple {
-		accounts, err = s.accountRepo.ListSchedulableByPlatform(ctx, platform)
-	} else if groupID != nil {
-		accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatform(ctx, *groupID, platform)
-		// 分组内无账号则返回空列表，由上层处理错误，不再回退到全平台查询
+	if useMixed {
+		if groupID != nil {
+			accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatforms(ctx, *groupID, queryPlatforms)
+		} else if s.cfg != nil && s.cfg.RunMode == config.RunModeSimple {
+			accounts, err = s.accountRepo.ListSchedulableByPlatforms(ctx, queryPlatforms)
+		} else {
+			accounts, err = s.accountRepo.ListSchedulableUngroupedByPlatforms(ctx, queryPlatforms)
+		}
 	} else {
-		accounts, err = s.accountRepo.ListSchedulableUngroupedByPlatform(ctx, platform)
+		// 非混合：queryPlatforms 必为单元素，沿用单数仓库方法（与历史调用模式一致）。
+		qp := queryPlatforms[0]
+		if s.cfg != nil && s.cfg.RunMode == config.RunModeSimple {
+			accounts, err = s.accountRepo.ListSchedulableByPlatform(ctx, qp)
+		} else if groupID != nil {
+			accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatform(ctx, *groupID, qp)
+			// 分组内无账号则返回空列表，由上层处理错误，不再回退到全平台查询
+		} else {
+			accounts, err = s.accountRepo.ListSchedulableUngroupedByPlatform(ctx, qp)
+		}
 	}
 	if err != nil {
 		slog.Debug("account_scheduling_list_failed",
@@ -2360,20 +2337,31 @@ func (s *GatewayService) listSchedulableAccounts(ctx context.Context, groupID *i
 			"error", err)
 		return nil, useMixed, err
 	}
-	slog.Debug("account_scheduling_list_single",
+	// 按目标平台别名 + 是否混合调度过滤（统一处理 Gemini/Antigravity 合并后的成员归属）。
+	filtered := make([]Account, 0, len(accounts))
+	for i := range accounts {
+		if accountServesSchedulingPlatform(&accounts[i], platform, useMixed) {
+			filtered = append(filtered, accounts[i])
+		}
+	}
+	slog.Debug("account_scheduling_list",
 		"group_id", derefGroupID(groupID),
 		"platform", platform,
-		"count", len(accounts))
-	for _, acc := range accounts {
+		"use_mixed", useMixed,
+		"raw_count", len(accounts),
+		"filtered_count", len(filtered))
+	for i := range filtered {
+		acc := &filtered[i]
 		slog.Debug("account_scheduling_account_detail",
 			"account_id", acc.ID,
 			"name", acc.Name,
 			"platform", acc.Platform,
+			"sub_platform", acc.SubPlatform,
 			"type", acc.Type,
 			"status", acc.Status,
 			"tls_fingerprint", acc.IsTLSFingerprintEnabled())
 	}
-	return accounts, useMixed, nil
+	return filtered, useMixed, nil
 }
 
 // IsSingleAntigravityAccountGroup 检查指定分组是否只有一个 antigravity 平台的可调度账号。
@@ -2388,16 +2376,7 @@ func (s *GatewayService) IsSingleAntigravityAccountGroup(ctx context.Context, gr
 }
 
 func (s *GatewayService) isAccountAllowedForPlatform(account *Account, platform string, useMixed bool) bool {
-	if account == nil {
-		return false
-	}
-	if useMixed {
-		if account.Platform == platform {
-			return true
-		}
-		return account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled()
-	}
-	return account.Platform == platform
+	return accountServesSchedulingPlatform(account, platform, useMixed)
 }
 
 func (s *GatewayService) isAccountSchedulableForSelection(account *Account) bool {
@@ -3340,7 +3319,7 @@ func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, g
 							_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
 						}
 						if !clearSticky && s.isAccountInGroup(account, groupID) && (requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, account, requestedModel)) && s.isAccountSchedulableForModelSelection(ctx, account, requestedModel) && s.isAccountSchedulableForQuota(account) && s.isAccountSchedulableForWindowCost(ctx, account, true) && s.isAccountSchedulableForRPM(ctx, account, true) {
-							if account.Platform == nativePlatform || (account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled()) {
+							if accountServesSchedulingPlatform(account, nativePlatform, true) {
 								if s.debugModelRoutingEnabled() {
 									logger.LegacyPrintf("service.gateway", "[ModelRoutingDebug] legacy mixed routed sticky hit: group_id=%v model=%s session=%s account=%d", derefGroupID(groupID), requestedModel, shortSessionHash(sessionHash), accountID)
 								}
@@ -3392,7 +3371,7 @@ func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, g
 				continue
 			}
 			// 过滤：原生平台直接通过，antigravity 需要启用混合调度
-			if acc.Platform == PlatformAntigravity && !acc.IsMixedSchedulingEnabled() {
+			if acc.IsAntigravity() && !acc.IsMixedSchedulingEnabled() {
 				continue
 			}
 			if requestedModel != "" && !s.isModelSupportedByAccountWithContext(ctx, acc, requestedModel) {
@@ -3423,7 +3402,7 @@ func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, g
 				case acc.LastUsedAt != nil && selected.LastUsedAt == nil:
 					// keep selected (never used is preferred)
 				case acc.LastUsedAt == nil && selected.LastUsedAt == nil:
-					if preferOAuth && acc.Platform == PlatformGemini && selected.Platform == PlatformGemini && acc.Type != selected.Type && acc.Type == AccountTypeOAuth {
+					if preferOAuth && acc.IsPureGemini() && selected.IsPureGemini() && acc.Type != selected.Type && acc.Type == AccountTypeOAuth {
 						selected = acc
 					}
 				default:
@@ -3461,7 +3440,7 @@ func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, g
 						_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
 					}
 					if !clearSticky && s.isAccountInGroup(account, groupID) && (requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, account, requestedModel)) && s.isAccountSchedulableForModelSelection(ctx, account, requestedModel) && s.isAccountSchedulableForQuota(account) && s.isAccountSchedulableForWindowCost(ctx, account, true) && s.isAccountSchedulableForRPM(ctx, account, true) && !s.isStickyAccountUpstreamRestricted(ctx, groupID, account, requestedModel) {
-						if account.Platform == nativePlatform || (account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled()) {
+						if accountServesSchedulingPlatform(account, nativePlatform, true) {
 							return account, nil
 						}
 					}
@@ -3504,7 +3483,7 @@ func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, g
 			continue
 		}
 		// 过滤：原生平台直接通过，antigravity 需要启用混合调度
-		if acc.Platform == PlatformAntigravity && !acc.IsMixedSchedulingEnabled() {
+		if acc.IsAntigravity() && !acc.IsMixedSchedulingEnabled() {
 			continue
 		}
 		if requestedModel != "" && !s.isModelSupportedByAccountWithContext(ctx, acc, requestedModel) {
@@ -3538,7 +3517,7 @@ func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, g
 			case acc.LastUsedAt != nil && selected.LastUsedAt == nil:
 				// keep selected (never used is preferred)
 			case acc.LastUsedAt == nil && selected.LastUsedAt == nil:
-				if preferOAuth && acc.Platform == PlatformGemini && selected.Platform == PlatformGemini && acc.Type != selected.Type && acc.Type == AccountTypeOAuth {
+				if preferOAuth && acc.IsPureGemini() && selected.IsPureGemini() && acc.Type != selected.Type && acc.Type == AccountTypeOAuth {
 					selected = acc
 				}
 			default:
@@ -3698,16 +3677,12 @@ func isPlatformFilteredForSelection(acc *Account, platform string, allowMixedSch
 	if acc == nil {
 		return true
 	}
-	if allowMixedScheduling {
-		if acc.Platform == PlatformAntigravity {
-			return !acc.IsMixedSchedulingEnabled()
-		}
-		return acc.Platform != platform
-	}
 	if strings.TrimSpace(platform) == "" {
 		return false
 	}
-	return acc.Platform != platform
+	// 被平台过滤 == 不服务于该调度平台（统一处理 Gemini/Antigravity 合并后的成员归属，
+	// 含强制 antigravity：antigravity 账号现 platform=="gemini"，须经 sub_platform 判别）。
+	return !accountServesSchedulingPlatform(acc, platform, allowMixedScheduling)
 }
 
 func appendSelectionFailureSampleID(samples []int64, id int64) []int64 {
@@ -3742,7 +3717,7 @@ func summarizeSelectionFailureStats(stats selectionFailureStats) string {
 // isModelSupportedByAccountWithContext 根据账户平台检查模型支持（带 context）
 // 对于 Antigravity 平台，会先获取映射后的最终模型名（包括 thinking 后缀）再检查支持
 func (s *GatewayService) isModelSupportedByAccountWithContext(ctx context.Context, account *Account, requestedModel string) bool {
-	if account.Platform == PlatformAntigravity {
+	if account.IsAntigravity() {
 		if strings.TrimSpace(requestedModel) == "" {
 			return true
 		}
@@ -3766,7 +3741,7 @@ func (s *GatewayService) isModelSupportedByAccountWithContext(ctx context.Contex
 
 // isModelSupportedByAccount 根据账户平台检查模型支持（无 context，用于非 Antigravity 平台）
 func (s *GatewayService) isModelSupportedByAccount(account *Account, requestedModel string) bool {
-	if account.Platform == PlatformAntigravity {
+	if account.IsAntigravity() {
 		if strings.TrimSpace(requestedModel) == "" {
 			return true
 		}
@@ -4567,9 +4542,10 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 
 	// 获取代理URL（自定义 base URL 模式下，proxy 通过 buildCustomRelayURL 作为查询参数传递）
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		if !account.IsCustomBaseURLEnabled() || account.GetCustomBaseURL() == "" {
-			proxyURL = account.Proxy.URL()
+	if !account.IsCustomBaseURLEnabled() || account.GetCustomBaseURL() == "" {
+		proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, parsed.GroupID)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -4604,7 +4580,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 			safeErr := sanitizeUpstreamErrorMessage(err.Error())
 			setOpsUpstreamError(c, 0, safeErr, "")
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: 0,
@@ -4630,7 +4606,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 
 				if s.shouldRectifySignatureError(ctx, account, respBody) {
 					appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-						Platform:           account.Platform,
+						Platform:           account.EffectivePlatform(),
 						AccountID:          account.ID,
 						AccountName:        account.Name,
 						UpstreamStatusCode: resp.StatusCode,
@@ -4685,7 +4661,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 							_ = retryResp.Body.Close()
 							if retryReadErr == nil && retryResp.StatusCode == 400 && s.isSignatureErrorPattern(ctx, account, retryRespBody) {
 								appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-									Platform:           account.Platform,
+									Platform:           account.EffectivePlatform(),
 									AccountID:          account.ID,
 									AccountName:        account.Name,
 									UpstreamStatusCode: retryResp.StatusCode,
@@ -4717,7 +4693,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 											_ = retryResp2.Body.Close()
 										}
 										appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-											Platform:           account.Platform,
+											Platform:           account.EffectivePlatform(),
 											AccountID:          account.ID,
 											AccountName:        account.Name,
 											UpstreamStatusCode: 0,
@@ -4756,7 +4732,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 				errMsg := extractUpstreamErrorMessage(respBody)
 				if isThinkingBudgetConstraintError(errMsg) && s.settingService.IsBudgetRectifierEnabled(ctx) {
 					appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-						Platform:           account.Platform,
+						Platform:           account.EffectivePlatform(),
 						AccountID:          account.ID,
 						AccountName:        account.Name,
 						UpstreamStatusCode: resp.StatusCode,
@@ -4818,7 +4794,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 				respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 				_ = resp.Body.Close()
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -4846,7 +4822,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 
 		// 不需要重试（成功或不可重试的错误），跳出循环
 		// DEBUG: 输出响应 headers（用于检测 rate limit 信息）
-		if account.Platform == PlatformGemini && resp.StatusCode < 400 && s.cfg != nil && s.cfg.Gateway.GeminiDebugResponseHeaders {
+		if account.IsPureGemini() && resp.StatusCode < 400 && s.cfg != nil && s.cfg.Gateway.GeminiDebugResponseHeaders {
 			logger.LegacyPrintf("service.gateway", "[DEBUG] Gemini API Response Headers for account %d:", account.ID)
 			for k, v := range resp.Header {
 				logger.LegacyPrintf("service.gateway", "[DEBUG]   %s: %v", k, v)
@@ -4872,7 +4848,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 
 			s.handleRetryExhaustedSideEffects(ctx, resp, account)
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: resp.StatusCode,
@@ -4907,7 +4883,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 
 		s.handleFailoverSideEffects(ctx, resp, account, reqModel)
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
+			Platform:           account.EffectivePlatform(),
 			AccountID:          account.ID,
 			UpstreamStatusCode: resp.StatusCode,
 			UpstreamRequestID:  resp.Header.Get("x-request-id"),
@@ -4949,7 +4925,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 					upstreamDetail = truncateString(string(respBody), maxBytes)
 				}
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -5059,8 +5035,9 @@ func (s *GatewayService) forwardAnthropicAPIKeyPassthroughWithInput(
 	}
 
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, apiKeyGroupID(getAPIKeyFromContext(c)))
+	if err != nil {
+		return nil, err
 	}
 
 	logger.LegacyPrintf("service.gateway", "[Anthropic 自动透传] 命中 API Key 透传分支: account=%d name=%s model=%s stream=%v",
@@ -5090,7 +5067,7 @@ func (s *GatewayService) forwardAnthropicAPIKeyPassthroughWithInput(
 			safeErr := sanitizeUpstreamErrorMessage(err.Error())
 			setOpsUpstreamError(c, 0, safeErr, "")
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: 0,
@@ -5129,7 +5106,7 @@ func (s *GatewayService) forwardAnthropicAPIKeyPassthroughWithInput(
 				respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 				_ = resp.Body.Close()
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -5173,7 +5150,7 @@ func (s *GatewayService) forwardAnthropicAPIKeyPassthroughWithInput(
 
 			s.handleRetryExhaustedSideEffects(ctx, resp, account)
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: resp.StatusCode,
@@ -5207,7 +5184,7 @@ func (s *GatewayService) forwardAnthropicAPIKeyPassthroughWithInput(
 
 		s.handleFailoverSideEffects(ctx, resp, account, input.RequestModel)
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
+			Platform:           account.EffectivePlatform(),
 			AccountID:          account.ID,
 			AccountName:        account.Name,
 			UpstreamStatusCode: resp.StatusCode,
@@ -5768,8 +5745,9 @@ func (s *GatewayService) forwardBedrock(
 	}
 
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, nil)
+	if err != nil {
+		return nil, err
 	}
 
 	logger.LegacyPrintf("service.gateway", "[Bedrock] 命中 Bedrock 分支: account=%d name=%s model=%s->%s stream=%v",
@@ -5877,7 +5855,7 @@ func (s *GatewayService) executeBedrockUpstream(
 			safeErr := sanitizeUpstreamErrorMessage(err.Error())
 			setOpsUpstreamError(c, 0, safeErr, "")
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: 0,
@@ -5914,7 +5892,7 @@ func (s *GatewayService) executeBedrockUpstream(
 				respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 				_ = resp.Body.Close()
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
+					Platform:           account.EffectivePlatform(),
 					AccountID:          account.ID,
 					AccountName:        account.Name,
 					UpstreamStatusCode: resp.StatusCode,
@@ -5965,7 +5943,7 @@ func (s *GatewayService) handleBedrockUpstreamErrors(
 
 			s.handleRetryExhaustedSideEffects(ctx, resp, account)
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: resp.StatusCode,
@@ -5989,7 +5967,7 @@ func (s *GatewayService) handleBedrockUpstreamErrors(
 
 		s.handleFailoverSideEffects(ctx, resp, account)
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
+			Platform:           account.EffectivePlatform(),
 			AccountID:          account.ID,
 			AccountName:        account.Name,
 			UpstreamStatusCode: resp.StatusCode,
@@ -7160,7 +7138,7 @@ func (s *GatewayService) handleErrorResponse(ctx context.Context, resp *http.Res
 	}
 	setOpsUpstreamError(c, resp.StatusCode, upstreamMsg, upstreamDetail)
 	appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-		Platform:           account.Platform,
+		Platform:           account.EffectivePlatform(),
 		AccountID:          account.ID,
 		UpstreamStatusCode: resp.StatusCode,
 		UpstreamRequestID:  resp.Header.Get("x-request-id"),
@@ -7337,7 +7315,7 @@ func (s *GatewayService) handleRetryExhaustedError(ctx context.Context, resp *ht
 	}
 	setOpsUpstreamError(c, resp.StatusCode, upstreamMsg, upstreamDetail)
 	appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-		Platform:           account.Platform,
+		Platform:           account.EffectivePlatform(),
 		AccountID:          account.ID,
 		UpstreamStatusCode: resp.StatusCode,
 		UpstreamRequestID:  resp.Header.Get("x-request-id"),
@@ -9133,7 +9111,7 @@ func (s *GatewayService) isUpstreamModelRestrictedByChannel(ctx context.Context,
 
 // resolveAccountUpstreamModel 确定账号将请求模型映射为什么上游模型。
 func resolveAccountUpstreamModel(account *Account, requestedModel string) string {
-	if account.Platform == PlatformAntigravity {
+	if account.IsAntigravity() {
 		return mapAntigravityModel(account, requestedModel)
 	}
 	return account.GetMappedModel(requestedModel)
@@ -9216,7 +9194,7 @@ func (s *GatewayService) ForwardCountTokens(ctx context.Context, c *gin.Context,
 
 	// Antigravity 账户不支持 count_tokens，返回 404 让客户端 fallback 到本地估算。
 	// 返回 nil 避免 handler 层记录为错误，也不设置 ops 上游错误上下文。
-	if account.Platform == PlatformAntigravity {
+	if account.IsAntigravity() {
 		s.countTokensError(c, http.StatusNotFound, "not_found_error", "count_tokens endpoint is not supported for this platform")
 		return nil
 	}
@@ -9263,9 +9241,11 @@ func (s *GatewayService) ForwardCountTokens(ctx context.Context, c *gin.Context,
 
 	// 获取代理URL（自定义 base URL 模式下，proxy 通过 buildCustomRelayURL 作为查询参数传递）
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		if !account.IsCustomBaseURLEnabled() || account.GetCustomBaseURL() == "" {
-			proxyURL = account.Proxy.URL()
+	if !account.IsCustomBaseURLEnabled() || account.GetCustomBaseURL() == "" {
+		proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, apiKeyGroupID(getAPIKeyFromContext(c)))
+		if err != nil {
+			s.countTokensError(c, http.StatusBadGateway, "upstream_error", "Failed to resolve proxy")
+			return err
 		}
 	}
 
@@ -9379,15 +9359,17 @@ func (s *GatewayService) forwardCountTokensAnthropicAPIKeyPassthrough(ctx contex
 	}
 
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, apiKeyGroupID(getAPIKeyFromContext(c)))
+	if err != nil {
+		s.countTokensError(c, http.StatusBadGateway, "upstream_error", "Failed to resolve proxy")
+		return err
 	}
 
 	resp, err := s.httpUpstream.DoWithTLS(upstreamReq, proxyURL, account.ID, account.Concurrency, s.tlsFPProfileService.ResolveTLSProfile(account))
 	if err != nil {
 		setOpsUpstreamError(c, 0, sanitizeUpstreamErrorMessage(err.Error()), "")
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
+			Platform:           account.EffectivePlatform(),
 			AccountID:          account.ID,
 			AccountName:        account.Name,
 			UpstreamStatusCode: 0,
@@ -9441,7 +9423,7 @@ func (s *GatewayService) forwardCountTokensAnthropicAPIKeyPassthrough(ctx contex
 		}
 		setOpsUpstreamError(c, resp.StatusCode, upstreamMsg, upstreamDetail)
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
+			Platform:           account.EffectivePlatform(),
 			AccountID:          account.ID,
 			AccountName:        account.Name,
 			UpstreamStatusCode: resp.StatusCode,

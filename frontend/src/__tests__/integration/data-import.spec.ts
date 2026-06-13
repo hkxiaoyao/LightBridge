@@ -19,7 +19,7 @@ vi.mock('@/api/admin', () => ({
       importData: vi.fn()
     },
     groups: {
-      getByPlatform: vi.fn().mockResolvedValue([])
+      getAll: vi.fn().mockResolvedValue([])
     }
   }
 }))
@@ -116,7 +116,7 @@ describe('ImportDataModal', () => {
     showError.mockReset()
     showSuccess.mockReset()
     vi.mocked(adminAPI.accounts.importData).mockReset()
-    vi.mocked(adminAPI.groups.getByPlatform).mockResolvedValue([])
+    vi.mocked(adminAPI.groups.getAll).mockResolvedValue([])
   })
 
   it('未选择文件时提示错误', async () => {
@@ -256,9 +256,9 @@ describe('ImportDataModal', () => {
   })
 
   it('导入时支持选择分组并批量覆盖账号设置', async () => {
-    vi.mocked(adminAPI.groups.getByPlatform).mockResolvedValue([
+    vi.mocked(adminAPI.groups.getAll).mockResolvedValue([
       { id: 10, name: 'Group A', platform: 'openai', status: 'active', sort_order: 1 },
-      { id: 11, name: 'Group B', platform: 'openai', status: 'active', sort_order: 2 }
+      { id: 11, name: 'Group B', platform: 'gemini', status: 'active', sort_order: 2 }
     ] as any)
     vi.mocked(adminAPI.accounts.importData).mockResolvedValue({
       proxy_created: 0,
@@ -375,6 +375,60 @@ describe('ImportDataModal', () => {
     })
   })
 
+  it('选择 ZIP 后保留 CPA Codex JSON 给后端转换', async () => {
+    vi.mocked(adminAPI.accounts.importData).mockResolvedValue({
+      proxy_created: 0,
+      proxy_reused: 0,
+      proxy_failed: 0,
+      account_created: 1,
+      account_failed: 0
+    })
+    const wrapper = mount(ImportDataModal, {
+      props: { show: true },
+      global: {
+        stubs: {
+          BaseDialog: { template: '<div><slot /><slot name="footer" /></div>' }
+        }
+      }
+    })
+
+    const zipBytes = makeStoredZip([
+      {
+        name: 'cpa-codex.json',
+        content: '{"type":"codex","email":"zip-cpa@example.com","refresh_token":"zip-cpa-refresh","id_token":"zip-cpa-id"}'
+      }
+    ])
+    const zipFile = new File([zipBytes], 'cpa.zip', { type: 'application/zip' })
+    Object.defineProperty(zipFile, 'arrayBuffer', {
+      value: () => Promise.resolve(zipBytes.buffer)
+    })
+
+    const input = wrapper.find('input[type="file"]')
+    Object.defineProperty(input.element, 'files', {
+      value: [zipFile]
+    })
+
+    await input.trigger('change')
+    await flushPromises()
+    await wrapper.find('form').trigger('submit')
+
+    await vi.waitFor(() => {
+      expect(adminAPI.accounts.importData).toHaveBeenCalledTimes(1)
+    })
+    expect(adminAPI.accounts.importData).toHaveBeenCalledWith({
+      data: {
+        type: 'codex',
+        email: 'zip-cpa@example.com',
+        refresh_token: 'zip-cpa-refresh',
+        id_token: 'zip-cpa-id'
+      },
+      skip_default_group_bind: true,
+      compatibility_mode: false,
+      group_ids: [],
+      account_defaults: undefined
+    })
+  })
+
   it('支持粘贴下载链接由服务端导入', async () => {
     vi.mocked(adminAPI.accounts.importData).mockResolvedValue({
       proxy_created: 0,
@@ -392,7 +446,7 @@ describe('ImportDataModal', () => {
       }
     })
 
-    const urlInput = wrapper.find('input[type="url"]')
+    const urlInput = wrapper.find('textarea')
     await urlInput.setValue('https://example.com/accounts.zip')
     const checkboxes = wrapper.findAll('input[type="checkbox"]')
     await checkboxes[checkboxes.length - 1].setValue(true)
@@ -406,5 +460,45 @@ describe('ImportDataModal', () => {
       group_ids: [],
       account_defaults: undefined
     })
+  })
+
+  it('支持按换行输入多个下载链接并显示导入进度', async () => {
+    vi.mocked(adminAPI.accounts.importData).mockResolvedValue({
+      proxy_created: 0,
+      proxy_reused: 0,
+      proxy_failed: 0,
+      account_created: 1,
+      account_failed: 0
+    })
+    const wrapper = mount(ImportDataModal, {
+      props: { show: true },
+      global: {
+        stubs: {
+          BaseDialog: { template: '<div><slot /><slot name="footer" /></div>' }
+        }
+      }
+    })
+
+    await wrapper.find('textarea').setValue('https://example.com/one.zip\n\nhttps://example.com/two.json')
+    await wrapper.find('form').trigger('submit')
+
+    await vi.waitFor(() => {
+      expect(adminAPI.accounts.importData).toHaveBeenCalledTimes(2)
+    })
+    expect(adminAPI.accounts.importData).toHaveBeenNthCalledWith(1, {
+      source_url: 'https://example.com/one.zip',
+      skip_default_group_bind: true,
+      compatibility_mode: false,
+      group_ids: [],
+      account_defaults: undefined
+    })
+    expect(adminAPI.accounts.importData).toHaveBeenNthCalledWith(2, {
+      source_url: 'https://example.com/two.json',
+      skip_default_group_bind: true,
+      compatibility_mode: false,
+      group_ids: [],
+      account_defaults: undefined
+    })
+    expect(wrapper.text()).toContain('2 / 2')
   })
 })

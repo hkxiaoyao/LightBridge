@@ -158,7 +158,7 @@ func (s *GatewayService) handleWebSearchEmulation(
 	slog.Info("web search emulation: executing search",
 		"account_id", account.ID, "account_name", account.Name, "query", query)
 
-	resp, providerName, err := doWebSearch(ctx, account, query)
+	resp, providerName, err := s.doWebSearch(ctx, account, parsed.GroupID, query)
 	if err != nil {
 		// Proxy unavailable → trigger account switch via UpstreamFailoverError
 		if errors.Is(err, websearch.ErrProxyUnavailable) {
@@ -184,8 +184,11 @@ func (s *GatewayService) handleWebSearchEmulation(
 	return writeWebSearchNonStreamResponse(c, query, resp, model, startTime)
 }
 
-func doWebSearch(ctx context.Context, account *Account, query string) (*websearch.SearchResponse, string, error) {
-	proxyURL := resolveAccountProxyURL(account)
+func (s *GatewayService) doWebSearch(ctx context.Context, account *Account, groupID *int64, query string) (*websearch.SearchResponse, string, error) {
+	proxyURL, err := s.resolveAccountProxyURL(ctx, account, account.Platform, groupID)
+	if err != nil {
+		return nil, "", err
+	}
 	mgr := getWebSearchManager()
 	if mgr == nil {
 		return nil, "", fmt.Errorf("web search emulation: manager not initialized")
@@ -198,13 +201,6 @@ func doWebSearch(ctx context.Context, account *Account, query string) (*websearc
 		return nil, "", fmt.Errorf("web search emulation: %w", err)
 	}
 	return resp, providerName, nil
-}
-
-func resolveAccountProxyURL(account *Account) string {
-	if account.ProxyID != nil && account.Proxy != nil {
-		return account.Proxy.URL()
-	}
-	return ""
 }
 
 // --- SSE streaming response ---

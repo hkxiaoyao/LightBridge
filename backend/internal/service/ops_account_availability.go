@@ -70,7 +70,7 @@ func (s *OpsService) GetAccountAvailabilityStats(ctx context.Context, platformFi
 		if acc.Platform != "" {
 			if _, ok := platform[acc.Platform]; !ok {
 				platform[acc.Platform] = &PlatformAvailability{
-					Platform: acc.Platform,
+					Platform: acc.EffectivePlatform(),
 				}
 			}
 			p := platform[acc.Platform]
@@ -120,7 +120,7 @@ func (s *OpsService) GetAccountAvailabilityStats(ctx context.Context, platformFi
 		item := &AccountAvailability{
 			AccountID:   acc.ID,
 			AccountName: acc.Name,
-			Platform:    acc.Platform,
+			Platform:    acc.EffectivePlatform(),
 			GroupID:     displayGroupID,
 			GroupName:   displayGroupName,
 			Status:      acc.Status,

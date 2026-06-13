@@ -23,7 +23,7 @@ func TestRequestBodyLimitTooLarge(t *testing.T) {
 		if err != nil {
 			if maxErr, ok := extractMaxBytesError(err); ok {
 				c.JSON(http.StatusRequestEntityTooLarge, gin.H{
-					"error": buildBodyTooLargeMessage(maxErr.Limit),
+					"error": buildBodyTooLargeMessage(c, maxErr.Limit),
 				})
 				return
 			}
@@ -41,5 +41,5 @@ func TestRequestBodyLimitTooLarge(t *testing.T) {
 	router.ServeHTTP(recorder, req)
 
 	require.Equal(t, http.StatusRequestEntityTooLarge, recorder.Code)
-	require.Contains(t, recorder.Body.String(), buildBodyTooLargeMessage(limit))
+	require.Contains(t, recorder.Body.String(), buildBodyTooLargeMessage(nil, limit))
 }

@@ -29,6 +29,8 @@ const (
 	FieldPlatform = "platform"
 	// FieldType holds the string denoting the type field in the database.
 	FieldType = "type"
+	// FieldSubPlatform holds the string denoting the sub_platform field in the database.
+	FieldSubPlatform = "sub_platform"
 	// FieldCredentials holds the string denoting the credentials field in the database.
 	FieldCredentials = "credentials"
 	// FieldExtra holds the string denoting the extra field in the database.
@@ -119,6 +121,7 @@ var Columns = []string{
 	FieldNotes,
 	FieldPlatform,
 	FieldType,
+	FieldSubPlatform,
 	FieldCredentials,
 	FieldExtra,
 	FieldProxyID,
@@ -178,6 +181,10 @@ var (
 	PlatformValidator func(string) error
 	// TypeValidator is a validator for the "type" field. It is called by the builders before save.
 	TypeValidator func(string) error
+	// DefaultSubPlatform holds the default value on creation for the "sub_platform" field.
+	DefaultSubPlatform string
+	// SubPlatformValidator is a validator for the "sub_platform" field. It is called by the builders before save.
+	SubPlatformValidator func(string) error
 	// DefaultCredentials holds the default value on creation for the "credentials" field.
 	DefaultCredentials func() map[string]interface{}
 	// DefaultExtra holds the default value on creation for the "extra" field.
@@ -241,6 +248,11 @@ func ByPlatform(opts ...sql.OrderTermOption) OrderOption {
 // ByType orders the results by the type field.
 func ByType(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldType, opts...).ToFunc()
+}
+
+// BySubPlatform orders the results by the sub_platform field.
+func BySubPlatform(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubPlatform, opts...).ToFunc()
 }
 
 // ByProxyID orders the results by the proxy_id field.

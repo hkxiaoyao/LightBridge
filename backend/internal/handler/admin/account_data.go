@@ -175,7 +175,7 @@ func (h *AccountHandler) ExportData(c *gin.Context) {
 		dataAccounts = append(dataAccounts, DataAccount{
 			Name:               acc.Name,
 			Notes:              acc.Notes,
-			Platform:           acc.Platform,
+			Platform:           acc.EffectivePlatform(),
 			Type:               acc.Type,
 			Credentials:        acc.Credentials,
 			Extra:              acc.Extra,
@@ -224,7 +224,7 @@ func (h *AccountHandler) resolveImportDataPayloads(ctx context.Context, raw json
 	if sourceURL != "" {
 		downloaded, filename, err := downloadImportSourceURL(ctx, sourceURL)
 		if err != nil {
-			return nil, infraerrors.ServiceUnavailable("DATA_IMPORT_SOURCE_DOWNLOAD_FAILED", "download import source failed").WithCause(err)
+			return nil, infraerrors.ServiceUnavailable("DATA_IMPORT_SOURCE_DOWNLOAD_FAILED", fmt.Sprintf("download import source failed: %s", err.Error())).WithCause(err)
 		}
 		return normalizeImportFileData(downloaded, filename, compatibilityMode)
 	}
@@ -524,7 +524,7 @@ func (h *AccountHandler) importData(ctx context.Context, dataPayload DataPayload
 			continue
 		}
 		// 收集 Antigravity OAuth 账号，稍后异步设置隐私
-		if created.Platform == service.PlatformAntigravity && created.Type == service.AccountTypeOAuth {
+		if created.IsAntigravity() && created.Type == service.AccountTypeOAuth {
 			privacyAccounts = append(privacyAccounts, created)
 		}
 		result.AccountCreated++

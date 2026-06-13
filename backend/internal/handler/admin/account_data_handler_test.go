@@ -352,6 +352,36 @@ func TestImportDataAcceptsCLIProxyAPISingleAccountJSON(t *testing.T) {
 	require.Equal(t, "session-single", created.Credentials["session_token"])
 }
 
+func TestImportDataAcceptsCLIProxyAPICodexJSONWithoutAccountID(t *testing.T) {
+	router, adminSvc := setupAccountDataRouter()
+
+	dataPayload := map[string]any{
+		"data": map[string]any{
+			"type":          "codex",
+			"email":         "codex-token@example.com",
+			"refresh_token": "refresh-codex-only",
+			"id_token":      "id-codex-only",
+		},
+	}
+
+	body, _ := json.Marshal(dataPayload)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/accounts/data", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	require.Len(t, adminSvc.createdAccounts, 1)
+	created := adminSvc.createdAccounts[0]
+	require.Equal(t, "codex-token@example.com", created.Name)
+	require.Equal(t, service.PlatformOpenAI, created.Platform)
+	require.Equal(t, service.AccountTypeOAuth, created.Type)
+	require.Equal(t, "refresh-codex-only", created.Credentials["refresh_token"])
+	require.Equal(t, "id-codex-only", created.Credentials["id_token"])
+	require.Equal(t, "codex-token@example.com", created.Credentials["email"])
+	require.Equal(t, "cliproxyapi", created.Extra["import_source"])
+}
+
 func TestImportDataCompatibilityModeExtractsNestedJSON(t *testing.T) {
 	router, adminSvc := setupAccountDataRouter()
 
@@ -544,12 +574,70 @@ func TestImportDataFromSourceURLZIP(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 
 	require.Len(t, adminSvc.createdAccounts, 2)
-	require.Equal(t, "zip-json", adminSvc.createdAccounts[0].Name)
-	require.Equal(t, "zip-access", adminSvc.createdAccounts[0].Credentials["access_token"])
-	require.Equal(t, []int64{10}, adminSvc.createdAccounts[0].GroupIDs)
-	require.Equal(t, "zip@example.com", adminSvc.createdAccounts[1].Name)
-	require.Equal(t, "zip-refresh", adminSvc.createdAccounts[1].Credentials["refresh_token"])
-	require.Equal(t, []int64{10}, adminSvc.createdAccounts[1].GroupIDs)
+	createdByName := map[string]*service.CreateAccountInput{}
+	for i := range adminSvc.createdAccounts {
+		createdByName[adminSvc.createdAccounts[i].Name] = adminSvc.createdAccounts[i]
+	}
+	require.Equal(t, "zip-access", createdByName["zip-json"].Credentials["access_token"])
+	require.Equal(t, []int64{10}, createdByName["zip-json"].GroupIDs)
+	require.Equal(t, "zip-refresh", createdByName["zip@example.com"].Credentials["refresh_token"])
+	require.Equal(t, []int64{10}, createdByName["zip@example.com"].GroupIDs)
+}
+
+func TestImportDataFromSourceURLZIPAcceptsCLIProxyAPICodexJSON(t *testing.T) {
+	router, adminSvc := setupAccountDataRouter()
+	zipData := buildAccountImportTestZip(t, map[string]string{
+		"cpa-codex.json": `{
+			"type":"codex",
+			"email":"zip-cpa@example.com",
+			"refresh_token":"zip-cpa-refresh",
+			"id_token":"zip-cpa-id"
+		}`,
+	})
+	source := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodGet, r.Method)
+		w.Header().Set("Content-Type", "application/zip")
+		_, _ = w.Write(zipData)
+	}))
+	defer source.Close()
+
+	dataPayload := map[string]any{
+		"source_url": source.URL + "/bundle.zip",
+	}
+
+	body, _ := json.Marshal(dataPayload)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/accounts/data", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	require.Len(t, adminSvc.createdAccounts, 1)
+	created := adminSvc.createdAccounts[0]
+	require.Equal(t, "zip-cpa@example.com", created.Name)
+	require.Equal(t, "zip-cpa-refresh", created.Credentials["refresh_token"])
+	require.Equal(t, "zip-cpa-id", created.Credentials["id_token"])
+	require.Equal(t, "cliproxyapi", created.Extra["import_source"])
+}
+
+func TestImportDataFromSourceURLDownloadFailureIncludesCause(t *testing.T) {
+	router, _ := setupAccountDataRouter()
+	source := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer source.Close()
+
+	dataPayload := map[string]any{
+		"source_url": source.URL + "/missing.zip",
+	}
+
+	body, _ := json.Marshal(dataPayload)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/accounts/data", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
+	require.Contains(t, rec.Body.String(), "download import source failed: download source_url returned 404 Not Found")
 }
 
 func buildAccountImportTestZip(t *testing.T, files map[string]string) []byte {

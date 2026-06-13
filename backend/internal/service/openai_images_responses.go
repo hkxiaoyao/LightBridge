@@ -1151,8 +1151,11 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesOAuth(
 	upstreamReq.Header.Set("Accept", "text/event-stream")
 
 	proxyURL := ""
-	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	if !account.IsCustomBaseURLEnabled() || account.GetCustomBaseURL() == "" {
+		proxyURL, err = s.resolveAccountProxyURL(ctx, account, account.Platform, apiKeyGroupID(getAPIKeyFromContext(c)))
+		if err != nil {
+			return nil, err
+		}
 	}
 	upstreamStart := time.Now()
 	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
@@ -1161,7 +1164,7 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesOAuth(
 		safeErr := sanitizeUpstreamErrorMessage(err.Error())
 		setOpsUpstreamError(c, 0, safeErr, "")
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
+			Platform:           account.EffectivePlatform(),
 			AccountID:          account.ID,
 			AccountName:        account.Name,
 			UpstreamStatusCode: 0,
@@ -1179,7 +1182,7 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesOAuth(
 		upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
 		if s.shouldFailoverOpenAIUpstreamResponse(resp.StatusCode, upstreamMsg, respBody) {
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
+				Platform:           account.EffectivePlatform(),
 				AccountID:          account.ID,
 				AccountName:        account.Name,
 				UpstreamStatusCode: resp.StatusCode,
