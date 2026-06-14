@@ -41,6 +41,9 @@ func RegisterAdminRoutes(
 		// Antigravity OAuth
 		registerAntigravityOAuthRoutes(admin, h)
 
+		// AIStudio 反代（LB 托管 aistudio-api 子进程）
+		registerAistudioProxyRoutes(admin, h)
+
 		// 代理管理
 		registerProxyRoutes(admin, h)
 		registerProxyModuleRoutes(admin, h)
@@ -96,6 +99,9 @@ func RegisterAdminRoutes(
 		// 风控中心
 		registerContentModerationRoutes(admin, h)
 
+		// 隐私过滤
+		registerPrivacyFilterRoutes(admin, h)
+
 		// 邀请返利（专属用户管理）
 		registerAffiliateRoutes(admin, h)
 
@@ -129,6 +135,14 @@ func registerContentModerationRoutes(admin *gin.RouterGroup, h *handler.Handlers
 		risk.POST("/users/:user_id/unban", h.Admin.ContentModeration.UnbanUser)
 		risk.DELETE("/hashes", h.Admin.ContentModeration.DeleteFlaggedHash)
 		risk.DELETE("/hashes/all", h.Admin.ContentModeration.ClearFlaggedHashes)
+	}
+}
+
+func registerPrivacyFilterRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	pf := admin.Group("/privacy-filter")
+	{
+		pf.GET("/config", h.Admin.PrivacyFilter.GetConfig)
+		pf.PUT("/config", h.Admin.PrivacyFilter.UpdateConfig)
 	}
 }
 
@@ -384,6 +398,22 @@ func registerAntigravityOAuthRoutes(admin *gin.RouterGroup, h *handler.Handlers)
 		antigravity.POST("/oauth/auth-url", h.Admin.AntigravityOAuth.GenerateAuthURL)
 		antigravity.POST("/oauth/exchange-code", h.Admin.AntigravityOAuth.ExchangeCode)
 		antigravity.POST("/oauth/refresh-token", h.Admin.AntigravityOAuth.RefreshToken)
+	}
+}
+
+func registerAistudioProxyRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	if h == nil || h.Admin == nil || h.Admin.AistudioProxy == nil {
+		return
+	}
+	asp := admin.Group("/aistudio-proxy")
+	{
+		asp.GET("/status", h.Admin.AistudioProxy.Status)
+		asp.POST("/accounts/:id/import-cookies", h.Admin.AistudioProxy.ImportCookies)
+		asp.POST("/accounts/:id/stop", h.Admin.AistudioProxy.Stop)
+		asp.POST("/accounts/:id/login", h.Admin.AistudioProxy.StartLogin)
+		asp.GET("/accounts/:id/login/status", h.Admin.AistudioProxy.LoginStatus)
+		asp.GET("/runtime-status", h.Admin.AistudioProxy.RuntimeStatus)
+		asp.POST("/runtime-install", h.Admin.AistudioProxy.RuntimeInstall)
 	}
 }
 

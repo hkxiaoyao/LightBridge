@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -144,8 +145,10 @@ func (s *LightBridgeConnectService) DecryptToken(encrypted string) (string, erro
 	return string(plaintext), nil
 }
 
-// VerifyNewAPIToken verifies a New API system token and returns user info
-func (s *LightBridgeConnectService) VerifyNewAPIToken(ctx context.Context, instanceURL, token string) (*NewAPIUserResponse, error) {
+// VerifyNewAPIToken verifies a New API system token and returns user info.
+// userID is sent as the New-Api-User header, which New API requires when
+// authenticating web endpoints (e.g. /api/user/self) with a system access token.
+func (s *LightBridgeConnectService) VerifyNewAPIToken(ctx context.Context, instanceURL, token string, userID int) (*NewAPIUserResponse, error) {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
@@ -166,6 +169,11 @@ func (s *LightBridgeConnectService) VerifyNewAPIToken(ctx context.Context, insta
 
 	req.Header.Set("Authorization", token)
 	req.Header.Set("Content-Type", "application/json")
+	// New API requires the New-Api-User header (the caller's numeric user ID)
+	// when accessing web endpoints via a system access token.
+	if userID > 0 {
+		req.Header.Set("New-Api-User", strconv.Itoa(userID))
+	}
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -211,7 +219,7 @@ func (s *LightBridgeConnectService) SyncNewAPIQuota(ctx context.Context, config 
 	}
 
 	// Fetch user info
-	userInfo, err := s.VerifyNewAPIToken(ctx, config.InstanceURL, token)
+	userInfo, err := s.VerifyNewAPIToken(ctx, config.InstanceURL, token, config.UserID)
 	if err != nil {
 		return nil, err
 	}

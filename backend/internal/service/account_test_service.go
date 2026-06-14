@@ -1012,7 +1012,12 @@ func (s *AccountTestService) buildGeminiAPIKeyRequest(ctx context.Context, accou
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-goog-api-key", apiKey)
+	// AIStudio 反代（Bearer）账号使用 Bearer 鉴权；官方 AI Studio 账号使用 x-goog-api-key。
+	if account.UsesBearerAuth() {
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+	} else {
+		req.Header.Set("x-goog-api-key", apiKey)
+	}
 
 	return req, nil
 }

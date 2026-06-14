@@ -598,6 +598,19 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/admin/privacy-filter',
+    name: 'AdminPrivacyFilter',
+    component: () => import('@/views/admin/PrivacyFilterView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Privacy Filter',
+      titleKey: 'admin.privacyFilter.title',
+      descriptionKey: 'admin.privacyFilter.description',
+      requiresPrivacyFilter: true
+    }
+  },
+  {
     path: '/admin/usage',
     name: 'AdminUsage',
     component: () => import('@/views/admin/UsageView.vue'),
@@ -888,6 +901,14 @@ router.beforeEach(async (to, _from, next) => {
   if (to.meta.requiresRiskControl) {
     const riskControlEnabled = appStore.cachedPublicSettings?.risk_control_enabled === true
     if (!riskControlEnabled) {
+      next(authStore.isAdmin ? '/admin/settings' : '/dashboard')
+      return
+    }
+  }
+
+  if (to.meta.requiresPrivacyFilter) {
+    const privacyFilterEnabled = appStore.cachedPublicSettings?.privacy_filter_enabled === true
+    if (!privacyFilterEnabled) {
       next(authStore.isAdmin ? '/admin/settings' : '/dashboard')
       return
     }

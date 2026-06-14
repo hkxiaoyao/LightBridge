@@ -209,6 +209,30 @@ func (s *AccountService) GetByID(ctx context.Context, id int64) (*Account, error
 	return account, nil
 }
 
+// GetCredentials returns the raw credentials map for an account. Used by the
+// aistudio-proxy manager to preserve existing credential keys when persisting
+// runtime connection info.
+func (s *AccountService) GetCredentials(ctx context.Context, id int64) (map[string]any, error) {
+	acc, err := s.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return acc.Credentials, nil
+}
+
+// UpdateCredentials persists a credentials map for an account by fetching the
+// full account, replacing its credentials, and saving via the normal Update
+// path (which also refreshes the scheduler snapshot). Used by the aistudio-proxy
+// manager to write the runtime loopback base_url / bearer token.
+func (s *AccountService) UpdateCredentials(ctx context.Context, id int64, credentials map[string]any) error {
+	acc, err := s.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	acc.Credentials = credentials
+	return s.accountRepo.Update(ctx, acc)
+}
+
 // List 获取账号列表
 func (s *AccountService) List(ctx context.Context, params pagination.PaginationParams) ([]Account, *pagination.PaginationResult, error) {
 	accounts, pagination, err := s.accountRepo.List(ctx, params)

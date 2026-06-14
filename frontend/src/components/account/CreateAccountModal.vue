@@ -153,16 +153,16 @@
         </div>
       </div>
 
-      <!-- Gemini 家族接入方式：原生 Gemini 或 Antigravity（Antigravity 现为 Gemini 平台下的一种账号类型） -->
+      <!-- Gemini 家族接入方式：原生 Gemini / Antigravity / AIStudio 反代 -->
       <div v-if="form.platform === 'gemini' || form.platform === 'antigravity'">
         <label class="input-label">{{ t('admin.accounts.gemini.providerLabel') }}</label>
-        <div class="mt-2 grid grid-cols-2 gap-3">
+        <div class="mt-2 grid grid-cols-3 gap-3">
           <button
             type="button"
-            @click="form.platform = 'gemini'"
+            @click="form.platform = 'gemini'; geminiAuthMode = 'official'"
             :class="[
               'flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-all',
-              form.platform === 'gemini'
+              form.platform === 'gemini' && geminiAuthMode === 'official'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                 : 'border-gray-200 hover:border-blue-300 dark:border-dark-600 dark:hover:border-blue-700'
             ]"
@@ -170,7 +170,7 @@
             <div
               :class="[
                 'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
-                form.platform === 'gemini'
+                form.platform === 'gemini' && geminiAuthMode === 'official'
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 text-gray-500 dark:bg-dark-600 dark:text-gray-400'
               ]"
@@ -207,6 +207,33 @@
             <div>
               <span class="block text-sm font-medium text-gray-900 dark:text-white">{{ t('admin.accounts.gemini.providerAntigravity') }}</span>
               <span class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.accounts.gemini.providerAntigravityDesc') }}</span>
+            </div>
+          </button>
+          <button
+            type="button"
+            @click="selectAistudioProxy"
+            :class="[
+              'flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-all',
+              form.platform === 'gemini' && geminiAuthMode === 'proxy'
+                ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                : 'border-gray-200 hover:border-emerald-300 dark:border-dark-600 dark:hover:border-emerald-700'
+            ]"
+          >
+            <div
+              :class="[
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                form.platform === 'gemini' && geminiAuthMode === 'proxy'
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-gray-100 text-gray-500 dark:bg-dark-600 dark:text-gray-400'
+              ]"
+            >
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+              </svg>
+            </div>
+            <div>
+              <span class="block text-sm font-medium text-gray-900 dark:text-white">{{ t('admin.accounts.gemini.providerAistudioProxy') }}</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.accounts.gemini.providerAistudioProxyDesc') }}</span>
             </div>
           </button>
         </div>
@@ -1171,6 +1198,85 @@
 
       <!-- API Key input (only for apikey type, excluding Antigravity which has its own fields) -->
       <div v-if="form.type === 'apikey' && form.platform !== 'antigravity'" class="space-y-4">
+        <!-- AIStudio 反代（LB 托管）模式：不填 base_url/token，由 LB 管理；
+             这里改为粘贴 Google cookie 绑定会话。账号创建后再调用 cookie 导入。 -->
+        <div v-if="form.platform === 'gemini' && geminiAuthMode === 'proxy'" class="space-y-4">
+          <div class="rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
+            <p class="text-xs text-emerald-700 dark:text-emerald-400">
+              {{ t('admin.accounts.gemini.proxyManagedHint') }}
+            </p>
+          </div>
+          <!-- 运行时检测 / 安装（M2） -->
+          <div class="rounded-lg border border-gray-200 p-3 dark:border-dark-600">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-gray-900 dark:text-white">
+                {{ t('admin.accounts.gemini.proxyRuntimeTitle') }}
+              </span>
+              <button
+                type="button"
+                @click="checkProxyRuntime"
+                :disabled="proxyRuntimeChecking"
+                class="rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 disabled:opacity-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+              >
+                {{ proxyRuntimeChecking ? t('admin.accounts.gemini.proxyRuntimeChecking') : t('admin.accounts.gemini.proxyRuntimeCheck') }}
+              </button>
+            </div>
+            <p v-if="proxyRuntimeStatus" class="mt-2 text-xs" :class="proxyRuntimeStatus.ready ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'">
+              {{ proxyRuntimeStatus.ready
+                ? t('admin.accounts.gemini.proxyRuntimeReady')
+                : t('admin.accounts.gemini.proxyRuntimeNotReady') }}
+            </p>
+            <p v-if="proxyRuntimeStatus && !proxyRuntimeStatus.ready" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{ t('admin.accounts.gemini.proxyRuntimeInstallHint') }}
+            </p>
+            <button
+              v-if="proxyRuntimeStatus && !proxyRuntimeStatus.ready"
+              type="button"
+              @click="installProxyRuntime"
+              :disabled="proxyRuntimeInstalling"
+              class="mt-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600 disabled:opacity-50"
+            >
+              {{ proxyRuntimeInstalling ? t('admin.accounts.gemini.proxyRuntimeInstalling') : t('admin.accounts.gemini.proxyRuntimeInstall') }}
+            </button>
+            <div v-if="proxyRuntimeLogs.length" class="mt-2 max-h-32 overflow-auto rounded bg-gray-900 p-2 font-mono text-xs text-gray-100">
+              <p v-for="(line, idx) in proxyRuntimeLogs" :key="idx">{{ line }}</p>
+            </div>
+          </div>
+          <!-- 绑定方式：引导登录（M3）或粘贴 cookie（M1） -->
+          <div>
+            <label class="input-label">{{ t('admin.accounts.gemini.proxyBindModeLabel') }}</label>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                @click="geminiProxyBindMode = 'cookie'"
+                :class="['rounded-lg border-2 px-3 py-1.5 text-xs', geminiProxyBindMode === 'cookie' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-dark-600']"
+              >{{ t('admin.accounts.gemini.proxyBindModeCookie') }}</button>
+              <button
+                type="button"
+                @click="geminiProxyBindMode = 'login'"
+                :class="['rounded-lg border-2 px-3 py-1.5 text-xs', geminiProxyBindMode === 'login' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-dark-600']"
+              >{{ t('admin.accounts.gemini.proxyBindModeLogin') }}</button>
+            </div>
+            <p class="input-hint">{{ t('admin.accounts.gemini.proxyBindModeHint') }}</p>
+          </div>
+          <div v-if="geminiProxyBindMode === 'cookie'">
+            <label class="input-label">{{ t('admin.accounts.gemini.proxyCookieLabel') }}</label>
+            <textarea
+              v-model="geminiProxyCookie"
+              rows="4"
+              class="input font-mono"
+              :placeholder="t('admin.accounts.gemini.proxyCookiePlaceholder')"
+            ></textarea>
+            <p class="input-hint">{{ t('admin.accounts.gemini.proxyCookieHint') }}</p>
+          </div>
+          <div v-else class="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
+            <p class="text-xs text-blue-700 dark:text-blue-400">
+              {{ t('admin.accounts.gemini.proxyLoginHint') }}
+            </p>
+          </div>
+        </div>
+        <!-- 常规 APIKey（OpenAI / Gemini 官方 / Anthropic） -->
+        <template v-else>
         <div>
           <label class="input-label">{{ t('admin.accounts.baseUrl') }}</label>
           <input
@@ -1204,9 +1310,10 @@
           />
           <p class="input-hint">{{ apiKeyHint }}</p>
         </div>
+        </template>
 
-        <!-- Gemini API Key tier selection -->
-        <div v-if="form.platform === 'gemini'">
+        <!-- Gemini API Key tier selection (反代模式无 tier) -->
+        <div v-if="form.platform === 'gemini' && geminiAuthMode !== 'proxy'">
           <label class="input-label">{{ t('admin.accounts.gemini.tier.label') }}</label>
           <select v-model="geminiTierAIStudio" class="input">
             <option value="aistudio_free">{{ t('admin.accounts.gemini.tier.aiStudio.free') }}</option>
@@ -3369,6 +3476,14 @@ import {
 } from '@/composables/useModelWhitelist'
 import { useAuthStore } from '@/stores/auth'
 import { adminAPI } from '@/api/admin'
+import {
+  aistudioProxyImportCookies,
+  aistudioProxyRuntimeStatus,
+  aistudioProxyRuntimeInstall,
+  aistudioProxyStartLogin,
+  aistudioProxyLoginStatus,
+  type AistudioProxyRuntimeStatus,
+} from '@/api/admin/accounts'
 import { useQuotaNotifyState } from '@/composables/useQuotaNotifyState'
 import {
   useAccountOAuth,
@@ -3739,6 +3854,56 @@ const geminiTierGoogleOne = ref<'google_one_free' | 'google_ai_pro' | 'google_ai
 const geminiTierGcp = ref<'gcp_standard' | 'gcp_enterprise'>('gcp_standard')
 const geminiTierAIStudio = ref<'aistudio_free' | 'aistudio_paid'>('aistudio_free')
 
+// Gemini 鉴权模式：official=官方 AI Studio（x-goog-api-key）；proxy=AIStudio 反代（Bearer）。
+// 仅在 Gemini 平台 + APIKey 类型下生效。选择「AIStudio 反代」接入卡片时自动切到 proxy。
+const geminiAuthMode = ref<'official' | 'proxy'>('official')
+
+// 反代模式下用户粘贴的 Google cookie 串（创建账号后用于绑定 Google 会话）。
+const geminiProxyCookie = ref('')
+const geminiProxyBinding = ref(false)
+// 反代绑定方式：cookie（M1）或 login（M3 有头浏览器引导）。
+const geminiProxyBindMode = ref<'cookie' | 'login'>('cookie')
+// 反代运行时检测/安装状态（M2）。
+const proxyRuntimeStatus = ref<AistudioProxyRuntimeStatus | null>(null)
+const proxyRuntimeChecking = ref(false)
+const proxyRuntimeInstalling = ref(false)
+const proxyRuntimeLogs = ref<string[]>([])
+
+// 选择「AIStudio 反代」接入卡片：切到 Gemini 平台 + APIKey 类型 + Bearer 鉴权模式。
+function selectAistudioProxy() {
+  form.platform = 'gemini'
+  geminiAuthMode.value = 'proxy'
+  accountCategory.value = 'apikey'
+}
+
+async function checkProxyRuntime() {
+  proxyRuntimeChecking.value = true
+  try {
+    proxyRuntimeStatus.value = await aistudioProxyRuntimeStatus()
+  } catch (e: any) {
+    appStore.showError(e.response?.data?.detail || e.message || 'runtime check failed')
+  } finally {
+    proxyRuntimeChecking.value = false
+  }
+}
+
+async function installProxyRuntime() {
+  proxyRuntimeInstalling.value = true
+  proxyRuntimeLogs.value = []
+  try {
+    await aistudioProxyRuntimeInstall((line) => {
+      proxyRuntimeLogs.value.push(line)
+    })
+    appStore.showSuccess(t('admin.accounts.gemini.proxyRuntimeInstallDone'))
+    await checkProxyRuntime()
+  } catch (e: any) {
+    proxyRuntimeLogs.value.push(e.message || 'install failed')
+    appStore.showError(e.message || t('admin.accounts.gemini.proxyRuntimeInstallFailed'))
+  } finally {
+    proxyRuntimeInstalling.value = false
+  }
+}
+
 const geminiSelectedTier = computed(() => {
   if (form.platform !== 'gemini') return ''
   if (accountCategory.value === 'apikey') return geminiTierAIStudio.value
@@ -4002,6 +4167,10 @@ watch(
     } else {
       form.type = 'apikey'
     }
+    // 反代模式仅对 Gemini + APIKey 有效；离开 apikey 类别时复位为官方模式。
+    if (form.platform !== 'gemini' || category !== 'apikey') {
+      if (geminiAuthMode.value === 'proxy') geminiAuthMode.value = 'official'
+    }
   },
   { immediate: true }
 )
@@ -4075,6 +4244,20 @@ watch(
 
     geminiOAuth.resetState()
     antigravityOAuth.resetState()
+  }
+)
+
+// AIStudio 反代模式切换：清空 base_url（待用户填入反代地址）；切回官方时恢复默认地址。
+watch(
+  geminiAuthMode,
+  (mode) => {
+    if (form.platform !== 'gemini') return
+    if (mode === 'proxy') {
+      apiKeyBaseUrl.value = ''
+      apiKeyValue.value = ''
+    } else {
+      apiKeyBaseUrl.value = 'https://generativelanguage.googleapis.com'
+    }
   }
 )
 
@@ -4391,8 +4574,44 @@ const ensureAntigravityMixedChannelConfirmed = async (onConfirm: () => Promise<v
 const submitCreateAccount = async (payload: CreateAccountRequest) => {
   submitting.value = true
   try {
-    await adminAPI.accounts.create(withAntigravityConfirmFlag(payload))
+    const created = await adminAPI.accounts.create(withAntigravityConfirmFlag(payload))
     appStore.showSuccess(t('admin.accounts.accountCreated'))
+
+    // AIStudio 反代（LB 托管）模式：账号创建后立即绑定 Google 会话。
+    const isGeminiProxy = form.platform === 'gemini' && geminiAuthMode.value === 'proxy'
+    if (isGeminiProxy && created?.id) {
+      geminiProxyBinding.value = true
+      try {
+        if (geminiProxyBindMode.value === 'cookie' && geminiProxyCookie.value.trim()) {
+          await aistudioProxyImportCookies(created.id, { cookies: geminiProxyCookie.value.trim() })
+          appStore.showSuccess(t('admin.accounts.gemini.proxyCookieBound'))
+        } else if (geminiProxyBindMode.value === 'login') {
+          // 引导登录：启动有头浏览器会话并轮询到完成。
+          const start = await aistudioProxyStartLogin(created.id, form.name)
+          const sessionId = start.session_id
+          if (sessionId) {
+            appStore.showSuccess(t('admin.accounts.gemini.proxyLoginStarted'))
+            for (let i = 0; i < 120; i++) {
+              await new Promise((r) => setTimeout(r, 3000))
+              const st = await aistudioProxyLoginStatus(created.id, sessionId)
+              if (st.status === 'completed') {
+                appStore.showSuccess(t('admin.accounts.gemini.proxyLoginDone'))
+                break
+              }
+              if (st.status === 'failed') {
+                appStore.showError(t('admin.accounts.gemini.proxyLoginFailed') + (st.error || ''))
+                break
+              }
+            }
+          }
+        }
+      } catch (e: any) {
+        appStore.showError(t('admin.accounts.gemini.proxyCookieBindFailed') + (e.response?.data?.detail || e.message || ''))
+      } finally {
+        geminiProxyBinding.value = false
+      }
+    }
+
     emit('created')
     handleClose()
   } catch (error: any) {
@@ -4501,6 +4720,14 @@ const resetForm = () => {
   geminiTierGoogleOne.value = 'google_one_free'
   geminiTierGcp.value = 'gcp_standard'
   geminiTierAIStudio.value = 'aistudio_free'
+  geminiAuthMode.value = 'official'
+  geminiProxyCookie.value = ''
+  geminiProxyBinding.value = false
+  geminiProxyBindMode.value = 'cookie'
+  proxyRuntimeStatus.value = null
+  proxyRuntimeChecking.value = false
+  proxyRuntimeInstalling.value = false
+  proxyRuntimeLogs.value = []
   oauth.resetState()
   openaiOAuth.resetState()
   geminiOAuth.resetState()
@@ -4855,8 +5082,9 @@ const handleSubmit = async () => {
     return
   }
 
-  // For apikey type, create directly
-  if (!apiKeyValue.value.trim()) {
+  // For apikey type, create directly. 反代（LB 托管）模式不需要用户填 API Key/token。
+  const isGeminiProxy = form.platform === 'gemini' && geminiAuthMode.value === 'proxy'
+  if (!isGeminiProxy && !apiKeyValue.value.trim()) {
     appStore.showError(t('admin.accounts.pleaseEnterApiKey'))
     return
   }
@@ -4870,12 +5098,22 @@ const handleSubmit = async () => {
         : 'https://api.anthropic.com'
 
   // Build credentials with optional model mapping
-  const credentials: Record<string, unknown> = {
-    base_url: apiKeyBaseUrl.value.trim() || defaultBaseUrl,
-    api_key: apiKeyValue.value.trim()
+  const credentials: Record<string, unknown> = {}
+  if (isGeminiProxy) {
+    // 反代（LB 托管）：base_url/api_key 由后端 Manager 启动子进程时生成并写入，
+    // 这里只埋一个路由标记 auth_header=bearer 和占位 api_key。
+    credentials.auth_header = 'bearer'
+    credentials.api_key = 'managed-by-lightbridge'
+  } else {
+    credentials.base_url = apiKeyBaseUrl.value.trim() || defaultBaseUrl
+    credentials.api_key = apiKeyValue.value.trim()
   }
   if (form.platform === 'gemini') {
-    credentials.tier_id = geminiTierAIStudio.value
+    if (isGeminiProxy) {
+      // already set auth_header above; 反代无 tier
+    } else {
+      credentials.tier_id = geminiTierAIStudio.value
+    }
   }
 
   // Add model mapping if configured（OpenAI 开启自动透传时不应用）

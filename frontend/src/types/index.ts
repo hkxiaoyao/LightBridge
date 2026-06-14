@@ -210,6 +210,7 @@ export interface PublicSettings {
   hide_ccs_import_button: boolean
   payment_enabled: boolean
   risk_control_enabled: boolean
+  privacy_filter_enabled: boolean
   table_default_page_size: number
   table_page_size_options: number[]
   custom_menu_items: CustomMenuItem[]
@@ -720,6 +721,7 @@ export interface VerifyLightBridgeConnectTokenRequest {
   type: LightBridgeConnectType
   instance_url: string
   system_token: string
+  user_id: number
 }
 
 export interface VerifyLightBridgeConnectTokenResponse {

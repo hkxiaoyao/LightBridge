@@ -18,6 +18,7 @@ import (
 	"github.com/Wei-Shaw/LightBridge/internal/server"
 	"github.com/Wei-Shaw/LightBridge/internal/server/middleware"
 	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/Wei-Shaw/LightBridge/internal/service/aistudio_proxy"
 
 	"github.com/google/wire"
 	"github.com/redis/go-redis/v9"
@@ -99,6 +100,7 @@ func provideCleanup(
 	channelMonitorRunner *service.ChannelMonitorRunner,
 	quotaFlusher *service.UserPlatformQuotaUsageFlusher,
 	lightBridgeConnectSync *service.LightBridgeConnectSyncService,
+	aistudioProxyManager *aistudio_proxy.Manager,
 ) func() {
 	return func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -252,6 +254,12 @@ func provideCleanup(
 			{"LightBridgeConnectSyncService", func() error {
 				if lightBridgeConnectSync != nil {
 					lightBridgeConnectSync.Stop()
+				}
+				return nil
+			}},
+			{"AistudioProxyManager", func() error {
+				if aistudioProxyManager != nil {
+					aistudioProxyManager.StopAll()
 				}
 				return nil
 			}},

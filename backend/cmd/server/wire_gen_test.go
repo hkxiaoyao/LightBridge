@@ -75,6 +75,8 @@ func TestProvideCleanup_WithMinimalDependencies_NoPanic(t *testing.T) {
 		nil, // paymentOrderExpiry
 		nil, // channelMonitorRunner
 		nil, // quotaFlusher
+		nil, // lightBridgeConnectSync
+		nil, // aistudioProxyManager
 	)
 
 	require.NotPanics(t, func() {

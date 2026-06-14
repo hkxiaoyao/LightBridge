@@ -28,6 +28,15 @@
 
       <!-- API Key fields (only for apikey type) -->
       <div v-if="account.type === 'apikey'" class="space-y-4">
+        <!-- AIStudio 反代模式标识 -->
+        <div
+          v-if="isGeminiProxyAccount"
+          class="rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20"
+        >
+          <p class="text-xs text-emerald-700 dark:text-emerald-400">
+            {{ t('admin.accounts.gemini.proxyManagedHint') }}
+          </p>
+        </div>
         <div>
           <label class="input-label">{{ t('admin.accounts.baseUrl') }}</label>
           <input
@@ -37,14 +46,20 @@
             :placeholder="
               account.platform === 'openai'
                 ? 'https://api.openai.com'
-                : account.platform === 'gemini'
-                  ? 'https://generativelanguage.googleapis.com'
-                  : account.platform === 'antigravity'
-                    ? 'https://cloudcode-pa.googleapis.com'
-                    : 'https://api.anthropic.com'
+                : account.platform === 'gemini' && isGeminiProxyAccount
+                  ? 'http://your-aistudio-api-host:8080'
+                  : account.platform === 'gemini'
+                    ? 'https://generativelanguage.googleapis.com'
+                    : account.platform === 'antigravity'
+                      ? 'https://cloudcode-pa.googleapis.com'
+                      : 'https://api.anthropic.com'
             "
           />
-          <p class="input-hint">{{ baseUrlHint }}</p>
+          <p class="input-hint">{{
+            account.platform === 'gemini' && isGeminiProxyAccount
+              ? t('admin.accounts.gemini.proxyBaseUrlHint')
+              : baseUrlHint
+          }}</p>
         </div>
         <div>
           <label class="input-label">{{ t('admin.accounts.apiKey') }}</label>
@@ -59,14 +74,20 @@
             :placeholder="
               account.platform === 'openai'
                 ? 'sk-proj-...'
-                : account.platform === 'gemini'
-                  ? 'AIza...'
-                  : account.platform === 'antigravity'
-                    ? 'sk-...'
-                    : 'sk-ant-...'
+                : account.platform === 'gemini' && isGeminiProxyAccount
+                  ? 'your-secret-token'
+                  : account.platform === 'gemini'
+                    ? 'AIza...'
+                    : account.platform === 'antigravity'
+                      ? 'sk-...'
+                      : 'sk-ant-...'
             "
           />
-          <p class="input-hint">{{ t('admin.accounts.leaveEmptyToKeep') }}</p>
+          <p class="input-hint">{{
+            account.platform === 'gemini' && isGeminiProxyAccount
+              ? t('admin.accounts.gemini.proxyTokenHint')
+              : t('admin.accounts.leaveEmptyToKeep')
+          }}</p>
         </div>
 
         <!-- Model Restriction Section (不适用于 Antigravity) -->
@@ -2450,6 +2471,14 @@ const baseUrlHint = computed(() => {
   if (props.account.platform === 'openai') return t('admin.accounts.openai.baseUrlHint')
   if (props.account.platform === 'gemini') return t('admin.accounts.gemini.baseUrlHint')
   return t('admin.accounts.baseUrlHint')
+})
+
+// 是否为 AIStudio 反代（Bearer）账号：Gemini 平台 + APIKey + auth_header==bearer。
+const isGeminiProxyAccount = computed(() => {
+  const acc = props.account
+  if (!acc || acc.platform !== 'gemini' || acc.type !== 'apikey') return false
+  const cred = (acc.credentials as Record<string, unknown>) || {}
+  return cred.auth_header === 'bearer'
 })
 
 const antigravityPresetMappings = computed(() => getPresetMappingsByPlatform('antigravity'))

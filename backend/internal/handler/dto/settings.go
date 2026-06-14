@@ -244,6 +244,9 @@ type SystemSettings struct {
 	// 风控中心功能开关
 	RiskControlEnabled bool `json:"risk_control_enabled"`
 
+	// 隐私过滤功能开关
+	PrivacyFilterEnabled bool `json:"privacy_filter_enabled"`
+
 	// Affiliate (邀请返利) feature switch
 	AffiliateEnabled bool `json:"affiliate_enabled"`
 
@@ -316,6 +319,8 @@ type PublicSettings struct {
 	AffiliateEnabled bool `json:"affiliate_enabled"`
 
 	RiskControlEnabled bool `json:"risk_control_enabled"`
+
+	PrivacyFilterEnabled bool `json:"privacy_filter_enabled"`
 }
 
 type LoginAgreementDocument struct {

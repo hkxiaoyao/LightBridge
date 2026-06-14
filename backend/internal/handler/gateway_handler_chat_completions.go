@@ -96,6 +96,9 @@ func (h *GatewayHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
+	// 隐私过滤：转发上游前对请求体脱敏（下游 session hash / usage hash 均基于脱敏后 body）。
+	body = h.applyPrivacyFilter(c, reqLog, apiKey, service.ContentModerationProtocolOpenAIChat, reqModel, body)
+
 	// Error passthrough binding
 	if h.errorPassthroughService != nil {
 		service.BindErrorPassthroughService(c, h.errorPassthroughService)

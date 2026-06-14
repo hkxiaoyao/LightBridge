@@ -158,3 +158,81 @@ func TestGetGeminiBaseURL(t *testing.T) {
 		})
 	}
 }
+
+func TestUsesBearerAuth(t *testing.T) {
+	tests := []struct {
+		name     string
+		account  *Account
+		expected bool
+	}{
+		{
+			name:     "nil account returns false",
+			account:  nil,
+			expected: false,
+		},
+		{
+			name: "gemini apikey with bearer proxy mode",
+			account: &Account{
+				Type:        AccountTypeAPIKey,
+				Platform:    PlatformGemini,
+				Credentials: map[string]any{"auth_header": "bearer"},
+			},
+			expected: true,
+		},
+		{
+			name: "gemini apikey without auth_header defaults to x-goog-api-key",
+			account: &Account{
+				Type:        AccountTypeAPIKey,
+				Platform:    PlatformGemini,
+				Credentials: map[string]any{},
+			},
+			expected: false,
+		},
+		{
+			name: "gemini oauth never bearer-auth even if auth_header set",
+			account: &Account{
+				Type:        AccountTypeOAuth,
+				Platform:    PlatformGemini,
+				Credentials: map[string]any{"auth_header": "bearer"},
+			},
+			expected: false,
+		},
+		{
+			name: "antigravity apikey ignored (not pure gemini)",
+			account: &Account{
+				Type:        AccountTypeAPIKey,
+				SubPlatform: SubPlatformAntigravity,
+				Platform:    PlatformGemini,
+				Credentials: map[string]any{"auth_header": "bearer"},
+			},
+			expected: false,
+		},
+		{
+			name: "whitespace-padded bearer still recognized",
+			account: &Account{
+				Type:        AccountTypeAPIKey,
+				Platform:    PlatformGemini,
+				Credentials: map[string]any{"auth_header": "  bearer  "},
+			},
+			expected: true,
+		},
+		{
+			name: "non-bearer auth_header value returns false",
+			account: &Account{
+				Type:        AccountTypeAPIKey,
+				Platform:    PlatformGemini,
+				Credentials: map[string]any{"auth_header": "x-goog-api-key"},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.account.UsesBearerAuth()
+			if result != tt.expected {
+				t.Errorf("UsesBearerAuth() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}

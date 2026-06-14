@@ -734,4 +734,129 @@ export const accountsAPI = {
   setPrivacy
 }
 
+/**
+ * AIStudio reverse-proxy (LB-managed aistudio-api subprocess) endpoints.
+ */
+export interface AistudioProxyImportCookiesRequest {
+  cookies: string
+  name?: string
+  email?: string
+}
+
+export interface AistudioProxyImportCookiesResponse {
+  account_id?: string
+  name?: string
+  cookie_count?: number
+  domain_summary?: Record<string, unknown>
+}
+
+export async function aistudioProxyImportCookies(
+  accountId: number | string,
+  payload: AistudioProxyImportCookiesRequest
+): Promise<AistudioProxyImportCookiesResponse> {
+  const res = await apiClient.post(
+    `/admin/aistudio-proxy/accounts/${accountId}/import-cookies`,
+    payload
+  )
+  return res.data?.data ?? res.data
+}
+
+export async function aistudioProxyStatus(): Promise<{ enabled: boolean; instances: unknown[] }> {
+  const res = await apiClient.get('/admin/aistudio-proxy/status')
+  return res.data?.data ?? { enabled: false, instances: [] }
+}
+
+export async function aistudioProxyStop(accountId: number | string): Promise<void> {
+  await apiClient.post(`/admin/aistudio-proxy/accounts/${accountId}/stop`)
+}
+
+// --- M2: runtime detection / install ---
+
+export interface AistudioProxyRuntimeStatus {
+  runtime_dir: string
+  python_bin: string
+  python_ok: boolean
+  python_version?: string
+  aistudio_installed: boolean
+  packages_installed: boolean
+  browser_installed: boolean
+  missing_system_libs?: string[]
+  ready: boolean
+}
+
+export async function aistudioProxyRuntimeStatus(): Promise<AistudioProxyRuntimeStatus> {
+  const res = await apiClient.get('/admin/aistudio-proxy/runtime-status')
+  return res.data?.data ?? res.data
+}
+
+/**
+ * Trigger runtime install. Reads the SSE stream and invokes onLog for each
+ * progress line. Resolves with the final "done" payload, or rejects on error.
+ */
+export async function aistudioProxyRuntimeInstall(
+  onLog: (line: string) => void
+): Promise<{ done: boolean; result?: unknown }> {
+  const res = await apiClient.post('/admin/aistudio-proxy/runtime-install', {}, {
+    responseType: 'stream',
+    headers: { Accept: 'text/event-stream' },
+  })
+  // The axios streaming response is a ReadableStream in browser environments.
+  const reader = (res.data as ReadableStream<Uint8Array>)?.getReader?.()
+  if (!reader) {
+    // Fallback: treat as plain text response.
+    onLog(String(res.data))
+    return { done: true }
+  }
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let finalResult: { done: boolean; result?: unknown } = { done: false }
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const parts = buffer.split('\n\n')
+    buffer = parts.pop() ?? ''
+    for (const part of parts) {
+      const dataLine = part.split('\n').find((l) => l.startsWith('data: '))
+      if (!dataLine) continue
+      const json = JSON.parse(dataLine.slice(6))
+      if (json.log) onLog(json.log)
+      if (json.error) throw new Error(json.error)
+      if (json.done) finalResult = { done: true, result: json.result }
+    }
+  }
+  return finalResult
+}
+
+// --- M3: guided login ---
+
+export interface AistudioProxyStartLoginResponse {
+  session_id?: string
+}
+
+export async function aistudioProxyStartLogin(
+  accountId: number | string,
+  name?: string
+): Promise<AistudioProxyStartLoginResponse> {
+  const res = await apiClient.post(`/admin/aistudio-proxy/accounts/${accountId}/login`, { name })
+  return res.data?.data ?? res.data
+}
+
+export interface AistudioProxyLoginStatus {
+  status?: string // pending | completed | failed
+  account_id?: string
+  email?: string
+  error?: string
+}
+
+export async function aistudioProxyLoginStatus(
+  accountId: number | string,
+  sessionId: string
+): Promise<AistudioProxyLoginStatus> {
+  const res = await apiClient.get(`/admin/aistudio-proxy/accounts/${accountId}/login/status`, {
+    params: { session: sessionId },
+  })
+  return res.data?.data ?? res.data
+}
+
 export default accountsAPI

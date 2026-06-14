@@ -145,6 +145,7 @@ type SystemSettings struct {
 	DefaultConcurrency           int
 	DefaultBalance               float64
 	RiskControlEnabled           bool
+	PrivacyFilterEnabled         bool
 	AffiliateEnabled             bool
 	AffiliateRebateRate          float64
 	AffiliateRebateFreezeHours   int
@@ -293,6 +294,9 @@ type PublicSettings struct {
 
 	// 风控中心功能开关
 	RiskControlEnabled bool `json:"risk_control_enabled"`
+
+	// 隐私过滤功能开关
+	PrivacyFilterEnabled bool `json:"privacy_filter_enabled"`
 }
 
 type LoginAgreementDocument struct {

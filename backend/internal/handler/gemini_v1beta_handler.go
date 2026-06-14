@@ -66,6 +66,12 @@ func (h *GatewayHandler) GeminiV1BetaListModels(c *gin.Context) {
 		return
 	}
 
+	// AIStudio 反代（Bearer）账号上游无 /v1beta/models 列表端点，直接返回静态模型表。
+	if account.UsesBearerAuth() {
+		c.JSON(http.StatusOK, gemini.FallbackModelsList())
+		return
+	}
+
 	res, err := h.geminiCompatService.ForwardAIStudioGET(c.Request.Context(), account, "/v1beta/models")
 	if err != nil {
 		googleError(c, http.StatusBadGateway, err.Error())
@@ -116,6 +122,12 @@ func (h *GatewayHandler) GeminiV1BetaGetModel(c *gin.Context) {
 		}
 		markOpsRoutingCapacityLimitedIfNoAvailable(c, err)
 		googleError(c, http.StatusServiceUnavailable, localizef(c, "No available Gemini accounts: %s", err.Error()))
+		return
+	}
+
+	// AIStudio 反代（Bearer）账号上游无 /v1beta/models 列表端点，直接返回静态模型信息。
+	if account.UsesBearerAuth() {
+		c.JSON(http.StatusOK, gemini.FallbackModel(modelName))
 		return
 	}
 
@@ -191,6 +203,9 @@ func (h *GatewayHandler) GeminiV1BetaModels(c *gin.Context) {
 		googleError(c, contentModerationStatus(decision), decision.Message)
 		return
 	}
+
+	// 隐私过滤：转发上游前对请求体脱敏。
+	body = h.applyPrivacyFilter(c, reqLog, apiKey, service.ContentModerationProtocolGemini, modelName, body)
 
 	// 解析渠道级模型映射
 	channelMapping, _ := h.gatewayService.ResolveChannelMappingAndRestrict(c.Request.Context(), apiKey.GroupID, modelName)
@@ -480,7 +495,21 @@ func (h *GatewayHandler) GeminiV1BetaModels(c *gin.Context) {
 		if account.IsAntigravity() && account.Type != service.AccountTypeAPIKey {
 			result, err = h.antigravityGatewayService.ForwardGemini(requestCtx, c, account, modelName, action, stream, body, hasBoundSession)
 		} else {
-			result, err = h.geminiCompatService.ForwardNative(requestCtx, c, account, modelName, action, stream, body)
+			// AIStudio 反代（LB 托管 Bearer）账号：转发前确保其 aistudio-api 子进程已就绪。
+			// EnsureRunning 会把 base_url/api_key 持久化到 account.credentials，ForwardNative 据此转发。
+			if account.UsesBearerAuth() {
+				if upErr := h.ensureAistudioProxy(c.Request.Context(), account); upErr != nil {
+					// 视为可切换的上游错误：交给现有 failover 逻辑切到池内其它账号。
+					if accountReleaseFunc != nil {
+						accountReleaseFunc()
+					}
+					err = upErr
+				} else {
+					result, err = h.geminiCompatService.ForwardNative(requestCtx, c, account, modelName, action, stream, body)
+				}
+			} else {
+				result, err = h.geminiCompatService.ForwardNative(requestCtx, c, account, modelName, action, stream, body)
+			}
 		}
 		if accountReleaseFunc != nil {
 			accountReleaseFunc()
@@ -765,4 +794,38 @@ func derefGroupID(groupID *int64) int64 {
 		return 0
 	}
 	return *groupID
+}
+
+// ensureAistudioProxy 确保该 AIStudio 反代（Bearer）账号对应的 aistudio-api 子进程已就绪，
+// 并把进程的 loopback 地址/随机 Bearer token 刷写进内存中的 account 对象，使后续 ForwardNative
+// 能正确转发。失败时返回 UpstreamFailoverError 以触发现有 failover 切换到其它账号。
+func (h *GatewayHandler) ensureAistudioProxy(ctx context.Context, account *service.Account) error {
+	if h == nil || h.aistudioProxyManager == nil {
+		return &service.UpstreamFailoverError{
+			StatusCode:   http.StatusServiceUnavailable,
+			ResponseBody: []byte(`{"message":"aistudio reverse-proxy runtime is not available on this server"}`),
+		}
+	}
+	inst, err := h.aistudioProxyManager.EnsureRunning(ctx, account.ID)
+	if err != nil {
+		return &service.UpstreamFailoverError{
+			StatusCode:   http.StatusBadGateway,
+			ResponseBody: []byte(`{"message":"failed to start aistudio-api subprocess: ` + sanitizeForJSON(err.Error()) + `"}`),
+		}
+	}
+	// 刷新内存中 account 的连接信息（EnsureRunning 已落库，但内存对象可能仍是旧的）。
+	if account.Credentials == nil {
+		account.Credentials = make(map[string]any)
+	}
+	account.Credentials["base_url"] = inst.BaseURL
+	account.Credentials["api_key"] = inst.BearerToken
+	account.Credentials["auth_header"] = "bearer"
+	return nil
+}
+
+// sanitizeForJSON 去除错误信息中会破坏 JSON 字符串的字符，便于嵌入 error body。
+func sanitizeForJSON(s string) string {
+	s = strings.ReplaceAll(s, `\`, `/`)
+	s = strings.ReplaceAll(s, `"`, `'`)
+	return s
 }

@@ -29,6 +29,7 @@ type VerifyTokenRequest struct {
 	Type        string `json:"type" binding:"required"` // "new-api"
 	InstanceURL string `json:"instance_url" binding:"required,url"`
 	SystemToken string `json:"system_token" binding:"required"`
+	UserID      int    `json:"user_id" binding:"required"` // New API numeric user ID (New-Api-User header)
 }
 
 // VerifyTokenResponse represents the verification response
@@ -63,7 +64,7 @@ func (h *LightBridgeConnectHandler) VerifyToken(c *gin.Context) {
 	}
 
 	// Verify token
-	userInfo, err := h.lbcService.VerifyNewAPIToken(c.Request.Context(), req.InstanceURL, req.SystemToken)
+	userInfo, err := h.lbcService.VerifyNewAPIToken(c.Request.Context(), req.InstanceURL, req.SystemToken, req.UserID)
 	if err != nil {
 		c.JSON(http.StatusOK, VerifyTokenResponse{
 			Valid:    false,

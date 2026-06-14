@@ -564,6 +564,13 @@ type ModuleConfig struct {
 		MihomoBinaryPath string `mapstructure:"mihomo_binary_path"`
 		RuntimeDir       string `mapstructure:"runtime_dir"`
 	} `mapstructure:"proxy"`
+	// AistudioProxy configures the LB-managed aistudio-api reverse-proxy runtime.
+	// RuntimeDir is the directory containing the aistudio-api main.py checkout
+	// (default <data_dir>/aistudio-proxy). PythonBin is the interpreter (default python3).
+	AistudioProxy struct {
+		RuntimeDir string `mapstructure:"runtime_dir"`
+		PythonBin  string `mapstructure:"python_bin"`
+	} `mapstructure:"aistudio_proxy"`
 }
 
 type ServerConfig struct {

@@ -27,6 +27,7 @@ import (
 	"github.com/Wei-Shaw/LightBridge/internal/pkg/timezone"
 	middleware2 "github.com/Wei-Shaw/LightBridge/internal/server/middleware"
 	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/Wei-Shaw/LightBridge/internal/service/aistudio_proxy"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -48,12 +49,16 @@ type GatewayHandler struct {
 	usageRecordWorkerPool     *service.UsageRecordWorkerPool
 	errorPassthroughService   *service.ErrorPassthroughService
 	contentModerationService  *service.ContentModerationService
+	privacyFilterService      *service.PrivacyFilterService
 	concurrencyHelper         *ConcurrencyHelper
 	userMsgQueueHelper        *UserMsgQueueHelper
 	maxAccountSwitches        int
 	maxAccountSwitchesGemini  int
 	cfg                       *config.Config
 	settingService            *service.SettingService
+	// aistudioProxyManager manages the self-hosted aistudio-api subprocess for
+	// Gemini Bearer (AIStudio reverse-proxy) accounts. May be nil (feature off).
+	aistudioProxyManager      *aistudio_proxy.Manager
 }
 
 // NewGatewayHandler creates a new GatewayHandler
@@ -69,9 +74,11 @@ func NewGatewayHandler(
 	usageRecordWorkerPool *service.UsageRecordWorkerPool,
 	errorPassthroughService *service.ErrorPassthroughService,
 	contentModerationService *service.ContentModerationService,
+	privacyFilterService *service.PrivacyFilterService,
 	userMsgQueueService *service.UserMessageQueueService,
 	cfg *config.Config,
 	settingService *service.SettingService,
+	aistudioProxyManager *aistudio_proxy.Manager,
 ) *GatewayHandler {
 	pingInterval := time.Duration(0)
 	maxAccountSwitches := 10
@@ -103,12 +110,22 @@ func NewGatewayHandler(
 		usageRecordWorkerPool:     usageRecordWorkerPool,
 		errorPassthroughService:   errorPassthroughService,
 		contentModerationService:  contentModerationService,
+		privacyFilterService:      privacyFilterService,
 		concurrencyHelper:         NewConcurrencyHelper(concurrencyService, SSEPingFormatClaude, pingInterval),
 		userMsgQueueHelper:        umqHelper,
 		maxAccountSwitches:        maxAccountSwitches,
 		maxAccountSwitchesGemini:  maxAccountSwitchesGemini,
 		cfg:                       cfg,
 		settingService:            settingService,
+		aistudioProxyManager:      aistudioProxyManager,
+	}
+}
+
+// SetAistudioProxyManager injects the aistudio-api subprocess manager. Called
+// after construction by the DI layer; nil-safe (feature simply disabled).
+func (h *GatewayHandler) SetAistudioProxyManager(m *aistudio_proxy.Manager) {
+	if h != nil {
+		h.aistudioProxyManager = m
 	}
 }
 
@@ -198,6 +215,9 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 		h.errorResponse(c, contentModerationStatus(decision), contentModerationErrorCode(decision), decision.Message)
 		return
 	}
+
+	// 隐私过滤：转发上游前对请求体脱敏。
+	body = h.applyPrivacyFilter(c, reqLog, apiKey, service.ContentModerationProtocolAnthropicMessages, reqModel, body)
 
 	// Track if we've started streaming (for error handling)
 	streamStarted := false

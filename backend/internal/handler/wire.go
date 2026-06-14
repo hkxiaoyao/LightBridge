@@ -37,11 +37,13 @@ func ProvideAdminHandlers(
 	channelMonitorHandler *admin.ChannelMonitorHandler,
 	channelMonitorTemplateHandler *admin.ChannelMonitorRequestTemplateHandler,
 	contentModerationHandler *admin.ContentModerationHandler,
+	privacyFilterHandler *admin.PrivacyFilterHandler,
 	paymentHandler *admin.PaymentHandler,
 	affiliateHandler *admin.AffiliateHandler,
 	moduleHandler *admin.ModuleHandler,
 	uiThemeHandler *admin.UIThemeHandler,
 	lightBridgeConnectHandler *admin.LightBridgeConnectHandler,
+	aistudioProxyHandler *admin.AistudioProxyHandler,
 ) *AdminHandlers {
 	return &AdminHandlers{
 		Dashboard:              dashboardHandler,
@@ -72,11 +74,13 @@ func ProvideAdminHandlers(
 		ChannelMonitor:         channelMonitorHandler,
 		ChannelMonitorTemplate: channelMonitorTemplateHandler,
 		ContentModeration:      contentModerationHandler,
+		PrivacyFilter:          privacyFilterHandler,
 		Payment:                paymentHandler,
 		Affiliate:              affiliateHandler,
 		Module:                 moduleHandler,
 		UITheme:                uiThemeHandler,
 		LightBridgeConnect:     lightBridgeConnectHandler,
+		AistudioProxy:          aistudioProxyHandler,
 	}
 }
 
@@ -176,6 +180,7 @@ var ProviderSet = wire.NewSet(
 	admin.NewOpenAIOAuthHandler,
 	admin.NewGeminiOAuthHandler,
 	admin.NewAntigravityOAuthHandler,
+	admin.NewAistudioProxyHandler,
 	admin.NewProxyHandler,
 	admin.NewProxyModuleHandler,
 	admin.NewRedeemHandler,
@@ -194,6 +199,7 @@ var ProviderSet = wire.NewSet(
 	admin.NewChannelMonitorHandler,
 	admin.NewChannelMonitorRequestTemplateHandler,
 	admin.NewContentModerationHandler,
+	admin.NewPrivacyFilterHandler,
 	admin.NewPaymentHandler,
 	admin.NewAffiliateHandler,
 	admin.NewModuleHandler,

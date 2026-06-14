@@ -101,6 +101,9 @@ func (h *GatewayHandler) Responses(c *gin.Context) {
 		return
 	}
 
+	// 隐私过滤：转发上游前对请求体脱敏。
+	body = h.applyPrivacyFilter(c, reqLog, apiKey, service.ContentModerationProtocolOpenAIResponses, reqModel, body)
+
 	// Error passthrough binding
 	if h.errorPassthroughService != nil {
 		service.BindErrorPassthroughService(c, h.errorPassthroughService)

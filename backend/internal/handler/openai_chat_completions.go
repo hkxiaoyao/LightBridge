@@ -86,6 +86,9 @@ func (h *OpenAIGatewayHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
+	// 隐私过滤：转发上游前对请求体脱敏。
+	body = h.applyPrivacyFilter(c, reqLog, apiKey, service.ContentModerationProtocolOpenAIChat, reqModel, body)
+
 	// 解析渠道级模型映射
 	channelMapping, _ := h.gatewayService.ResolveChannelMappingAndRestrict(c.Request.Context(), apiKey.GroupID, reqModel)
 

@@ -34,11 +34,13 @@ type AdminHandlers struct {
 	ChannelMonitor         *admin.ChannelMonitorHandler
 	ChannelMonitorTemplate *admin.ChannelMonitorRequestTemplateHandler
 	ContentModeration      *admin.ContentModerationHandler
+	PrivacyFilter          *admin.PrivacyFilterHandler
 	Payment                *admin.PaymentHandler
 	Affiliate              *admin.AffiliateHandler
 	Module                 *admin.ModuleHandler
 	UITheme                *admin.UIThemeHandler
 	LightBridgeConnect     *admin.LightBridgeConnectHandler
+	AistudioProxy          *admin.AistudioProxyHandler
 }
 
 // Handlers contains all HTTP handlers

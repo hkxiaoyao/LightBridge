@@ -17,6 +17,25 @@
       </div>
     </div>
 
+    <!-- New API 用户 ID -->
+    <div>
+      <label class="input-label">
+        {{ t('admin.accounts.lightBridgeConnect.userId') }}
+        <span class="text-red-500">*</span>
+      </label>
+      <input
+        v-model.number="localConfig.user_id"
+        type="number"
+        min="1"
+        required
+        class="input"
+        :placeholder="t('admin.accounts.lightBridgeConnect.userIdPlaceholder')"
+      />
+      <p class="input-hint">
+        {{ t('admin.accounts.lightBridgeConnect.userIdHint') }}
+      </p>
+    </div>
+
     <!-- 系统访问令牌 -->
     <div>
       <label class="input-label">
@@ -34,7 +53,7 @@
         <button
           type="button"
           @click="verifyToken"
-          :disabled="verifying || !localConfig.system_token || !localConfig.instance_url"
+          :disabled="verifying || !localConfig.system_token || !localConfig.instance_url || !localConfig.user_id"
           class="btn-secondary"
         >
           <Icon v-if="verifying" name="refresh" class="animate-spin" size="sm" />
@@ -318,7 +337,8 @@ const formatBalance = (cents: number): string => {
 
 // 验证令牌
 const verifyToken = async () => {
-  if (!localConfig.value.system_token || !localConfig.value.instance_url) {
+  const userId = localConfig.value.user_id
+  if (!localConfig.value.system_token || !localConfig.value.instance_url || !userId) {
     return
   }
 
@@ -329,7 +349,8 @@ const verifyToken = async () => {
     const result = await lightBridgeConnectAPI.verifyToken(0, {
       type: 'new-api',
       instance_url: localConfig.value.instance_url,
-      system_token: localConfig.value.system_token
+      system_token: localConfig.value.system_token,
+      user_id: userId
     })
 
     verificationResult.value = result

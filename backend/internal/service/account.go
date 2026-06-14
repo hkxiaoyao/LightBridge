@@ -826,6 +826,17 @@ func (a *Account) GetGeminiBaseURL(defaultBaseURL string) string {
 	return baseURL
 }
 
+// UsesBearerAuth 报告该 Gemini APIKey 账号是否以 Bearer token 鉴权上游。
+// 用于 AIStudio 反代（如 aistudio-api）账号：上游使用 `Authorization: Bearer <token>`
+// 而非官方的 `x-goog-api-key` 头。仅对原生 Gemini APIKey 账号有意义（凭据字段
+// auth_header=="bearer"）；其他类型恒为 false。
+func (a *Account) UsesBearerAuth() bool {
+	if a == nil || a.Type != AccountTypeAPIKey || !a.IsPureGemini() {
+		return false
+	}
+	return strings.TrimSpace(a.GetCredential("auth_header")) == "bearer"
+}
+
 func (a *Account) GetExtraString(key string) string {
 	if a.Extra == nil {
 		return ""
