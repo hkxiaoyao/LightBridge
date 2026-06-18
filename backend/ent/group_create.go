@@ -11,14 +11,14 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/Wei-Shaw/LightBridge/ent/account"
-	"github.com/Wei-Shaw/LightBridge/ent/apikey"
-	"github.com/Wei-Shaw/LightBridge/ent/group"
-	"github.com/Wei-Shaw/LightBridge/ent/redeemcode"
-	"github.com/Wei-Shaw/LightBridge/ent/usagelog"
-	"github.com/Wei-Shaw/LightBridge/ent/user"
-	"github.com/Wei-Shaw/LightBridge/ent/usersubscription"
-	"github.com/Wei-Shaw/LightBridge/internal/domain"
+	"github.com/WilliamWang1721/LightBridge/ent/account"
+	"github.com/WilliamWang1721/LightBridge/ent/apikey"
+	"github.com/WilliamWang1721/LightBridge/ent/group"
+	"github.com/WilliamWang1721/LightBridge/ent/redeemcode"
+	"github.com/WilliamWang1721/LightBridge/ent/usagelog"
+	"github.com/WilliamWang1721/LightBridge/ent/user"
+	"github.com/WilliamWang1721/LightBridge/ent/usersubscription"
+	"github.com/WilliamWang1721/LightBridge/internal/domain"
 )
 
 // GroupCreate is the builder for creating a Group entity.

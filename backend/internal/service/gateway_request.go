@@ -10,9 +10,9 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/Wei-Shaw/LightBridge/internal/domain"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/antigravity"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
+	"github.com/WilliamWang1721/LightBridge/internal/domain"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/antigravity"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )

@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/apicompat"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/claude"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/apicompat"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/claude"
 	coderws "github.com/coder/websocket"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"

@@ -10,10 +10,10 @@ import (
 	"sync"
 	"testing"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/enttest"
-	"github.com/Wei-Shaw/LightBridge/ent/securitysecret"
-	"github.com/Wei-Shaw/LightBridge/internal/config"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/enttest"
+	"github.com/WilliamWang1721/LightBridge/ent/securitysecret"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
 	"github.com/stretchr/testify/require"
 
 	"entgo.io/ent/dialect"

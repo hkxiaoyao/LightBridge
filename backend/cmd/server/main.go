@@ -15,13 +15,13 @@ import (
 	"syscall"
 	"time"
 
-	_ "github.com/Wei-Shaw/LightBridge/ent/runtime"
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/handler"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
-	"github.com/Wei-Shaw/LightBridge/internal/server/middleware"
-	"github.com/Wei-Shaw/LightBridge/internal/setup"
-	"github.com/Wei-Shaw/LightBridge/internal/web"
+	_ "github.com/WilliamWang1721/LightBridge/ent/runtime"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/handler"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
+	"github.com/WilliamWang1721/LightBridge/internal/server/middleware"
+	"github.com/WilliamWang1721/LightBridge/internal/setup"
+	"github.com/WilliamWang1721/LightBridge/internal/web"
 
 	"github.com/gin-gonic/gin"
 )

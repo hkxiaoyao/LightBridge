@@ -14,11 +14,11 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect"
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/identityadoptiondecision"
-	"github.com/Wei-Shaw/LightBridge/ent/pendingauthsession"
-	dbpredicate "github.com/Wei-Shaw/LightBridge/ent/predicate"
-	infraerrors "github.com/Wei-Shaw/LightBridge/internal/pkg/errors"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/identityadoptiondecision"
+	"github.com/WilliamWang1721/LightBridge/ent/pendingauthsession"
+	dbpredicate "github.com/WilliamWang1721/LightBridge/ent/predicate"
+	infraerrors "github.com/WilliamWang1721/LightBridge/internal/pkg/errors"
 
 	entsql "entgo.io/ent/dialect/sql"
 )

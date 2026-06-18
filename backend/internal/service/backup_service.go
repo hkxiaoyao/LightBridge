@@ -16,9 +16,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	infraerrors "github.com/Wei-Shaw/LightBridge/internal/pkg/errors"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	infraerrors "github.com/WilliamWang1721/LightBridge/internal/pkg/errors"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
 )
 
 const (

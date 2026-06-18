@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/authidentity"
-	"github.com/Wei-Shaw/LightBridge/ent/enttest"
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/repository"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/authidentity"
+	"github.com/WilliamWang1721/LightBridge/ent/enttest"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/repository"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 	"github.com/stretchr/testify/require"
 
 	"entgo.io/ent/dialect"

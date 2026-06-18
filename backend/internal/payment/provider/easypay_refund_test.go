@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Wei-Shaw/LightBridge/internal/payment"
+	"github.com/WilliamWang1721/LightBridge/internal/payment"
 )
 
 func TestNormalizeEasyPayAPIBase(t *testing.T) {

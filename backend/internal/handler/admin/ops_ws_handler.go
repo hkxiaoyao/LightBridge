@@ -15,8 +15,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )

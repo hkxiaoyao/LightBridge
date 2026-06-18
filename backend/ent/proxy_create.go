@@ -11,8 +11,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/Wei-Shaw/LightBridge/ent/account"
-	"github.com/Wei-Shaw/LightBridge/ent/proxy"
+	"github.com/WilliamWang1721/LightBridge/ent/account"
+	"github.com/WilliamWang1721/LightBridge/ent/proxy"
 )
 
 // ProxyCreate is the builder for creating a Proxy entity.

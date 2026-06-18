@@ -1,6 +1,6 @@
 package service
 
-import "github.com/Wei-Shaw/LightBridge/internal/config"
+import "github.com/WilliamWang1721/LightBridge/internal/config"
 
 // OpenAIUpstreamTransport 表示 OpenAI 上游传输协议。
 type OpenAIUpstreamTransport string

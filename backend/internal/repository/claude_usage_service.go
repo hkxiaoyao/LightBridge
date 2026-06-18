@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	infraerrors "github.com/Wei-Shaw/LightBridge/internal/pkg/errors"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/httpclient"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	infraerrors "github.com/WilliamWang1721/LightBridge/internal/pkg/errors"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/httpclient"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 )
 
 const defaultClaudeUsageURL = "https://api.anthropic.com/api/oauth/usage"

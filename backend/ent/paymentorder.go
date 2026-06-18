@@ -10,8 +10,8 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/paymentorder"
-	"github.com/Wei-Shaw/LightBridge/ent/user"
+	"github.com/WilliamWang1721/LightBridge/ent/paymentorder"
+	"github.com/WilliamWang1721/LightBridge/ent/user"
 )
 
 // PaymentOrder is the model entity for the PaymentOrder schema.

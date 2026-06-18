@@ -10,9 +10,9 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/apikey"
-	"github.com/Wei-Shaw/LightBridge/ent/group"
-	"github.com/Wei-Shaw/LightBridge/ent/user"
+	"github.com/WilliamWang1721/LightBridge/ent/apikey"
+	"github.com/WilliamWang1721/LightBridge/ent/group"
+	"github.com/WilliamWang1721/LightBridge/ent/user"
 )
 
 // APIKey is the model entity for the APIKey schema.

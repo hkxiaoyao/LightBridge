@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/profile"
+	"github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/profile"
 )
 
 type Store interface {

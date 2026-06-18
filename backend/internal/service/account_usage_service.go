@@ -13,12 +13,12 @@ import (
 	"sync"
 	"time"
 
-	httppool "github.com/Wei-Shaw/LightBridge/internal/pkg/httpclient"
-	openaipkg "github.com/Wei-Shaw/LightBridge/internal/pkg/openai"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/pagination"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/timezone"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/tlsfingerprint"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/usagestats"
+	httppool "github.com/WilliamWang1721/LightBridge/internal/pkg/httpclient"
+	openaipkg "github.com/WilliamWang1721/LightBridge/internal/pkg/openai"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/pagination"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/timezone"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/tlsfingerprint"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/usagestats"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
 )

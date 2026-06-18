@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/httpclient"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/httpclient"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 )
 
 type githubReleaseClient struct {
@@ -25,7 +25,9 @@ type githubReleaseClientError struct {
 	err error
 }
 
-var appReleaseTagPattern = regexp.MustCompile(`^v\d+\.\d+\.\d+$`)
+// appReleaseTagPattern 匹配应用版本 tag：vX.Y.Z，允许可选的预发布/构建后缀
+// （如 v0.2.4-preview、v0.2.4-rc.1）。模块 tag（module-xxx-vX.Y.Z）不会匹配，因此被过滤掉。
+var appReleaseTagPattern = regexp.MustCompile(`^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$`)
 
 // NewGitHubReleaseClient 创建 GitHub Release 客户端
 // proxyURL 为空时直连 GitHub，支持 http/https/socks5/socks5h 协议

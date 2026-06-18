@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/pagination"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/pagination"
 )
 
 const (

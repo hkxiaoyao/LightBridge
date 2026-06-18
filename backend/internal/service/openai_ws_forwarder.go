@@ -15,9 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/openai"
-	"github.com/Wei-Shaw/LightBridge/internal/util/responseheaders"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/openai"
+	"github.com/WilliamWang1721/LightBridge/internal/util/responseheaders"
 	coderws "github.com/coder/websocket"
 	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"

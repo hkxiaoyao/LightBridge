@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/apicompat"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/apicompat"
 	"github.com/stretchr/testify/require"
 )
 

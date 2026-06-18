@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/apikey"
-	"github.com/Wei-Shaw/LightBridge/ent/schema/mixins"
-	"github.com/Wei-Shaw/LightBridge/ent/usersubscription"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/apikey"
+	"github.com/WilliamWang1721/LightBridge/ent/schema/mixins"
+	"github.com/WilliamWang1721/LightBridge/ent/usersubscription"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 	"github.com/stretchr/testify/require"
 )
 

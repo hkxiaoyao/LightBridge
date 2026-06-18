@@ -9,7 +9,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/paymentproviderinstance"
+	"github.com/WilliamWang1721/LightBridge/ent/paymentproviderinstance"
 )
 
 // PaymentProviderInstance is the model entity for the PaymentProviderInstance schema.

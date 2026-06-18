@@ -10,8 +10,8 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/group"
-	"github.com/Wei-Shaw/LightBridge/internal/domain"
+	"github.com/WilliamWang1721/LightBridge/ent/group"
+	"github.com/WilliamWang1721/LightBridge/internal/domain"
 )
 
 // Group is the model entity for the Group schema.

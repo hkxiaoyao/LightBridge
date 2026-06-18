@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/domain"
-	infraerrors "github.com/Wei-Shaw/LightBridge/internal/pkg/errors"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/pagination"
+	"github.com/WilliamWang1721/LightBridge/internal/domain"
+	infraerrors "github.com/WilliamWang1721/LightBridge/internal/pkg/errors"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/pagination"
 )
 
 const (

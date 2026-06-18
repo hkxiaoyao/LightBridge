@@ -7,10 +7,10 @@ import (
 	"net/mail"
 	"strings"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/authidentity"
-	infraerrors "github.com/Wei-Shaw/LightBridge/internal/pkg/errors"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/authidentity"
+	infraerrors "github.com/WilliamWang1721/LightBridge/internal/pkg/errors"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
 )
 
 type EmailOAuthIdentityInput struct {

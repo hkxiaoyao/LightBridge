@@ -9,9 +9,9 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/openai"
-	openaiwsv2 "github.com/Wei-Shaw/LightBridge/internal/service/openai_ws_v2"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/openai"
+	openaiwsv2 "github.com/WilliamWang1721/LightBridge/internal/service/openai_ws_v2"
 	coderws "github.com/coder/websocket"
 	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"

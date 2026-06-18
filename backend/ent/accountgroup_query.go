@@ -11,10 +11,10 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
-	"github.com/Wei-Shaw/LightBridge/ent/account"
-	"github.com/Wei-Shaw/LightBridge/ent/accountgroup"
-	"github.com/Wei-Shaw/LightBridge/ent/group"
-	"github.com/Wei-Shaw/LightBridge/ent/predicate"
+	"github.com/WilliamWang1721/LightBridge/ent/account"
+	"github.com/WilliamWang1721/LightBridge/ent/accountgroup"
+	"github.com/WilliamWang1721/LightBridge/ent/group"
+	"github.com/WilliamWang1721/LightBridge/ent/predicate"
 )
 
 // AccountGroupQuery is the builder for querying AccountGroup entities.

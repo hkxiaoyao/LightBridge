@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/ent/userplatformquota"
+	"github.com/WilliamWang1721/LightBridge/ent/userplatformquota"
 	"github.com/stretchr/testify/require"
 )
 

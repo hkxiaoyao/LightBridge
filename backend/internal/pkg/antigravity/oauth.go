@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	infraerrors "github.com/Wei-Shaw/LightBridge/internal/pkg/errors"
+	infraerrors "github.com/WilliamWang1721/LightBridge/internal/pkg/errors"
 )
 
 const (

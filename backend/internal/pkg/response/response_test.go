@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	errors2 "github.com/Wei-Shaw/LightBridge/internal/pkg/errors"
+	errors2 "github.com/WilliamWang1721/LightBridge/internal/pkg/errors"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )

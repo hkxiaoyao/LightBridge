@@ -9,9 +9,9 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/group"
-	"github.com/Wei-Shaw/LightBridge/ent/redeemcode"
-	"github.com/Wei-Shaw/LightBridge/ent/user"
+	"github.com/WilliamWang1721/LightBridge/ent/group"
+	"github.com/WilliamWang1721/LightBridge/ent/redeemcode"
+	"github.com/WilliamWang1721/LightBridge/ent/user"
 )
 
 // RedeemCode is the model entity for the RedeemCode schema.

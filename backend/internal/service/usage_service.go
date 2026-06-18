@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	infraerrors "github.com/Wei-Shaw/LightBridge/internal/pkg/errors"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/pagination"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/usagestats"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	infraerrors "github.com/WilliamWang1721/LightBridge/internal/pkg/errors"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/pagination"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/usagestats"
 )
 
 var (

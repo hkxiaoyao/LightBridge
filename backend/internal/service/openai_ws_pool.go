@@ -13,7 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
 	"golang.org/x/sync/errgroup"
 )
 

@@ -3,7 +3,7 @@ package service
 import (
 	"fmt"
 
-	"github.com/Wei-Shaw/LightBridge/internal/domain"
+	"github.com/WilliamWang1721/LightBridge/internal/domain"
 )
 
 // Status constants

@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	dbuser "github.com/Wei-Shaw/LightBridge/ent/user"
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	infraerrors "github.com/Wei-Shaw/LightBridge/internal/pkg/errors"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/oauth"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/response"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	dbuser "github.com/WilliamWang1721/LightBridge/ent/user"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	infraerrors "github.com/WilliamWang1721/LightBridge/internal/pkg/errors"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/oauth"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/response"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 
 	"github.com/gin-gonic/gin"
 )

@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/service/aistudio_proxy"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/service/aistudio_proxy"
 )
 
 // ProvideAistudioProxyManager builds the per-account aistudio-api subprocess

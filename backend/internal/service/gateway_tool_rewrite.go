@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/claude"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/claude"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )

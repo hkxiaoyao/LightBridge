@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/securitysecret"
-	"github.com/Wei-Shaw/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/securitysecret"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
 )
 
 const (

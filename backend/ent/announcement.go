@@ -10,8 +10,8 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/announcement"
-	"github.com/Wei-Shaw/LightBridge/internal/domain"
+	"github.com/WilliamWang1721/LightBridge/ent/announcement"
+	"github.com/WilliamWang1721/LightBridge/internal/domain"
 )
 
 // Announcement is the model entity for the Announcement schema.

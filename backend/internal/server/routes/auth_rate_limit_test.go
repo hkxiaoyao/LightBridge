@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/handler"
-	servermiddleware "github.com/Wei-Shaw/LightBridge/internal/server/middleware"
+	"github.com/WilliamWang1721/LightBridge/internal/handler"
+	servermiddleware "github.com/WilliamWang1721/LightBridge/internal/server/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"

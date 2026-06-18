@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	proxymodule "github.com/Wei-Shaw/LightBridge/internal/modules/proxy"
+	proxymodule "github.com/WilliamWang1721/LightBridge/internal/modules/proxy"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )

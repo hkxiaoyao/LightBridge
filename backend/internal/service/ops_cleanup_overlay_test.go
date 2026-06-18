@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
 )
 
 // makeOverlayService 构造一个没有 cron / db 的 cleanup service，仅用来测试 effective overlay。

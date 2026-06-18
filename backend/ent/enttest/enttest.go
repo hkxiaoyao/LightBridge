@@ -5,12 +5,12 @@ package enttest
 import (
 	"context"
 
-	"github.com/Wei-Shaw/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent"
 	// required by schema hooks.
-	_ "github.com/Wei-Shaw/LightBridge/ent/runtime"
+	_ "github.com/WilliamWang1721/LightBridge/ent/runtime"
 
 	"entgo.io/ent/dialect/sql/schema"
-	"github.com/Wei-Shaw/LightBridge/ent/migrate"
+	"github.com/WilliamWang1721/LightBridge/ent/migrate"
 )
 
 type (

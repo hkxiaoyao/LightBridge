@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
 	"golang.org/x/sync/singleflight"
 )
 

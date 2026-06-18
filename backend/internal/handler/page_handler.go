@@ -9,9 +9,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/response"
-	middleware2 "github.com/Wei-Shaw/LightBridge/internal/server/middleware"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/response"
+	middleware2 "github.com/WilliamWang1721/LightBridge/internal/server/middleware"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 	"github.com/gin-gonic/gin"
 )
 

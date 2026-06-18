@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/geminicli"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/httpclient"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/geminicli"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/httpclient"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
 )
 
 const (

@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/channelmonitor"
-	"github.com/Wei-Shaw/LightBridge/ent/channelmonitorrequesttemplate"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/channelmonitor"
+	"github.com/WilliamWang1721/LightBridge/ent/channelmonitorrequesttemplate"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 )
 
 // channelMonitorRequestTemplateRepository 实现 service.ChannelMonitorRequestTemplateRepository。

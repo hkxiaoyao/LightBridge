@@ -8,8 +8,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/Wei-Shaw/LightBridge/ent/channelmonitorrequesttemplate"
-	"github.com/Wei-Shaw/LightBridge/ent/predicate"
+	"github.com/WilliamWang1721/LightBridge/ent/channelmonitorrequesttemplate"
+	"github.com/WilliamWang1721/LightBridge/ent/predicate"
 )
 
 // ChannelMonitorRequestTemplateDelete is the builder for deleting a ChannelMonitorRequestTemplate entity.

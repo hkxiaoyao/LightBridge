@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
 )
 
 func TestInstanceSupportsType(t *testing.T) {

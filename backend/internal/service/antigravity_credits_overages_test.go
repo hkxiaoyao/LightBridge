@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/antigravity"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/antigravity"
 	"github.com/stretchr/testify/require"
 )
 

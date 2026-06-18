@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
 )
 
 // defaultAllowed 定义允许透传的响应头白名单

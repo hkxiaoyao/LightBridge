@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
 
 	entsql "entgo.io/ent/dialect/sql"
 )

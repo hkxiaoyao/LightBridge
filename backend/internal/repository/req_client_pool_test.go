@@ -7,7 +7,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/Wei-Shaw/LightBridge/internal/outbound"
+	"github.com/WilliamWang1721/LightBridge/internal/outbound"
 	"github.com/imroc/req/v3"
 	"github.com/stretchr/testify/require"
 )

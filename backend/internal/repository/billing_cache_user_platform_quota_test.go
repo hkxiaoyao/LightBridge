@@ -10,7 +10,7 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 )
 
 func newMiniRedisCache(t *testing.T) (*billingCache, *miniredis.Miniredis) {

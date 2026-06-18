@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/payment"
+	"github.com/WilliamWang1721/LightBridge/internal/payment"
 )
 
 // EasyPay constants.

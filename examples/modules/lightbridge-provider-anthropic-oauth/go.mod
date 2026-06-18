@@ -1,4 +1,4 @@
-module github.com/Wei-Shaw/LightBridge/examples/modules/lightbridge-provider-anthropic-oauth
+module github.com/WilliamWang1721/LightBridge/examples/modules/lightbridge-provider-anthropic-oauth
 
 go 1.26.3
 

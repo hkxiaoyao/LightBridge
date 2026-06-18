@@ -10,9 +10,9 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/identityadoptiondecision"
-	"github.com/Wei-Shaw/LightBridge/ent/pendingauthsession"
-	"github.com/Wei-Shaw/LightBridge/ent/user"
+	"github.com/WilliamWang1721/LightBridge/ent/identityadoptiondecision"
+	"github.com/WilliamWang1721/LightBridge/ent/pendingauthsession"
+	"github.com/WilliamWang1721/LightBridge/ent/user"
 )
 
 // PendingAuthSession is the model entity for the PendingAuthSession schema.

@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/openai"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/openai"
 	"github.com/gin-gonic/gin"
 )
 

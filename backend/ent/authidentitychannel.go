@@ -10,8 +10,8 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/authidentity"
-	"github.com/Wei-Shaw/LightBridge/ent/authidentitychannel"
+	"github.com/WilliamWang1721/LightBridge/ent/authidentity"
+	"github.com/WilliamWang1721/LightBridge/ent/authidentitychannel"
 )
 
 // AuthIdentityChannel is the model entity for the AuthIdentityChannel schema.

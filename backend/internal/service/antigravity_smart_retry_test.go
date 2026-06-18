@@ -5,7 +5,7 @@ package service
 import (
 	"bytes"
 	"context"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/tlsfingerprint"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/tlsfingerprint"
 	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"

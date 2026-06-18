@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/authidentity"
-	"github.com/Wei-Shaw/LightBridge/ent/authidentitychannel"
-	"github.com/Wei-Shaw/LightBridge/ent/identityadoptiondecision"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/authidentity"
+	"github.com/WilliamWang1721/LightBridge/ent/authidentitychannel"
+	"github.com/WilliamWang1721/LightBridge/ent/identityadoptiondecision"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 	"github.com/stretchr/testify/require"
 )
 

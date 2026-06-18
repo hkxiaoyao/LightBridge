@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/proxyutil"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/proxyutil"
 	"github.com/redis/go-redis/v9"
 )
 

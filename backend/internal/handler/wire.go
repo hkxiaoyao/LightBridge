@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"github.com/Wei-Shaw/LightBridge/internal/handler/admin"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/handler/admin"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 
 	"github.com/google/wire"
 )

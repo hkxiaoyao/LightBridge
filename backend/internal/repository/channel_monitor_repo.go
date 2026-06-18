@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/channelmonitor"
-	"github.com/Wei-Shaw/LightBridge/ent/channelmonitorhistory"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/channelmonitor"
+	"github.com/WilliamWang1721/LightBridge/ent/channelmonitorhistory"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 	"github.com/lib/pq"
 )
 

@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/enttest"
-	dbusagecleanuptask "github.com/Wei-Shaw/LightBridge/ent/usagecleanuptask"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/pagination"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/enttest"
+	dbusagecleanuptask "github.com/WilliamWang1721/LightBridge/ent/usagecleanuptask"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/pagination"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 	"github.com/stretchr/testify/require"
 
 	"entgo.io/ent/dialect"

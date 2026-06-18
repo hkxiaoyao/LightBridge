@@ -12,9 +12,9 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
-	"github.com/Wei-Shaw/LightBridge/ent/predicate"
-	"github.com/Wei-Shaw/LightBridge/ent/userattributedefinition"
-	"github.com/Wei-Shaw/LightBridge/ent/userattributevalue"
+	"github.com/WilliamWang1721/LightBridge/ent/predicate"
+	"github.com/WilliamWang1721/LightBridge/ent/userattributedefinition"
+	"github.com/WilliamWang1721/LightBridge/ent/userattributevalue"
 )
 
 // UserAttributeDefinitionUpdate is the builder for updating UserAttributeDefinition entities.

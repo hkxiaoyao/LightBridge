@@ -1,4 +1,4 @@
-module github.com/Wei-Shaw/LightBridge/examples/modules/lightbridge-provider-openai
+module github.com/WilliamWang1721/LightBridge/examples/modules/lightbridge-provider-openai
 
 go 1.26.3
 

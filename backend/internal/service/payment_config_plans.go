@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/group"
-	"github.com/Wei-Shaw/LightBridge/ent/subscriptionplan"
-	infraerrors "github.com/Wei-Shaw/LightBridge/internal/pkg/errors"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/group"
+	"github.com/WilliamWang1721/LightBridge/ent/subscriptionplan"
+	infraerrors "github.com/WilliamWang1721/LightBridge/internal/pkg/errors"
 )
 
 // validatePlanRequired checks that all required fields for a plan are provided.

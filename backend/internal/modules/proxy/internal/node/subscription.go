@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/util/urlvalidator"
+	"github.com/WilliamWang1721/LightBridge/internal/util/urlvalidator"
 )
 
 const DefaultSubscriptionMaxBytes int64 = 2 << 20

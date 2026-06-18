@@ -12,9 +12,9 @@ import (
 	entsql "entgo.io/ent/dialect/sql"
 	_ "modernc.org/sqlite"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/enttest"
-	"github.com/Wei-Shaw/LightBridge/internal/payment"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/enttest"
+	"github.com/WilliamWang1721/LightBridge/internal/payment"
 	"github.com/stretchr/testify/require"
 )
 

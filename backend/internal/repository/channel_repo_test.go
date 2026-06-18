@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/pagination"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/pagination"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 )

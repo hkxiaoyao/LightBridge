@@ -9,8 +9,8 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/user"
-	"github.com/Wei-Shaw/LightBridge/ent/userplatformquota"
+	"github.com/WilliamWang1721/LightBridge/ent/user"
+	"github.com/WilliamWang1721/LightBridge/ent/userplatformquota"
 )
 
 // UserPlatformQuota is the model entity for the UserPlatformQuota schema.

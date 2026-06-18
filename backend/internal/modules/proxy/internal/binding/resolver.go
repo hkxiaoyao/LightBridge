@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/profile"
-	proxyruntime "github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/runtime"
-	"github.com/Wei-Shaw/LightBridge/internal/outbound"
+	"github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/profile"
+	proxyruntime "github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/runtime"
+	"github.com/WilliamWang1721/LightBridge/internal/outbound"
 )
 
 const AdapterID = "lightbridge.proxy"

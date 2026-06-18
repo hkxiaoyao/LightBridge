@@ -20,9 +20,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/outbound"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/antigravity"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
+	"github.com/WilliamWang1721/LightBridge/internal/outbound"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/antigravity"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/tidwall/gjson"

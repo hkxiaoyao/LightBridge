@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/openai"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/openai_compat"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/openai"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/openai_compat"
 )
 
 // openaiResponsesProbeTimeout 是探测请求的超时时长。

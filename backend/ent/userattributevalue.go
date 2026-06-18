@@ -9,9 +9,9 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/user"
-	"github.com/Wei-Shaw/LightBridge/ent/userattributedefinition"
-	"github.com/Wei-Shaw/LightBridge/ent/userattributevalue"
+	"github.com/WilliamWang1721/LightBridge/ent/user"
+	"github.com/WilliamWang1721/LightBridge/ent/userattributedefinition"
+	"github.com/WilliamWang1721/LightBridge/ent/userattributevalue"
 )
 
 // UserAttributeValue is the model entity for the UserAttributeValue schema.

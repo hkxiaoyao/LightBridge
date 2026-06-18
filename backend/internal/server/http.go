@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/handler"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/websearch"
-	middleware2 "github.com/Wei-Shaw/LightBridge/internal/server/middleware"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/handler"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/websearch"
+	middleware2 "github.com/WilliamWang1721/LightBridge/internal/server/middleware"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"

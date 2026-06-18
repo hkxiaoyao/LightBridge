@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/modules"
+	"github.com/WilliamWang1721/LightBridge/internal/modules"
 )
 
 const (

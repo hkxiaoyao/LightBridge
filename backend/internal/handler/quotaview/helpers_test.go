@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/timezone"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/timezone"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 )
 
 // TestNextMonthlyResetTimeFrom_FromStart 验证：start 已知时返回 start+30d，不随 now 漂移。

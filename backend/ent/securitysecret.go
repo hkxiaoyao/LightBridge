@@ -9,7 +9,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/securitysecret"
+	"github.com/WilliamWang1721/LightBridge/ent/securitysecret"
 )
 
 // SecuritySecret is the model entity for the SecuritySecret schema.

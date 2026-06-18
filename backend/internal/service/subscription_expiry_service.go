@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/pagination"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/pagination"
 )
 
 // SubscriptionExpiryService periodically updates expired subscription status.

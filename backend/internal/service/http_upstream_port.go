@@ -3,7 +3,7 @@ package service
 import (
 	"net/http"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/tlsfingerprint"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/tlsfingerprint"
 )
 
 // HTTPUpstream 上游 HTTP 请求接口

@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/model"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
+	"github.com/WilliamWang1721/LightBridge/internal/model"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
 )
 
 // ErrorPassthroughRepository 定义错误透传规则的数据访问接口

@@ -9,7 +9,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/subscriptionplan"
+	"github.com/WilliamWang1721/LightBridge/ent/subscriptionplan"
 )
 
 // SubscriptionPlan is the model entity for the SubscriptionPlan schema.

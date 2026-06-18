@@ -23,10 +23,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/outbound"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/proxyurl"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/proxyutil"
-	"github.com/Wei-Shaw/LightBridge/internal/util/urlvalidator"
+	"github.com/WilliamWang1721/LightBridge/internal/outbound"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/proxyurl"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/proxyutil"
+	"github.com/WilliamWang1721/LightBridge/internal/util/urlvalidator"
 )
 
 // Transport 连接池默认配置

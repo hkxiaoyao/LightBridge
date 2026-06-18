@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/httpclient"
-	"github.com/Wei-Shaw/LightBridge/internal/util/urlvalidator"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/httpclient"
+	"github.com/WilliamWang1721/LightBridge/internal/util/urlvalidator"
 )
 
 type CRSSyncService struct {

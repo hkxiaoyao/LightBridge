@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Wei-Shaw/LightBridge/internal/modules"
+	"github.com/WilliamWang1721/LightBridge/internal/modules"
 	"github.com/gin-gonic/gin"
 )
 

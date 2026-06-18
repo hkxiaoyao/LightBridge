@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/modules"
-	proxymodule "github.com/Wei-Shaw/LightBridge/internal/modules/proxy"
-	"github.com/Wei-Shaw/LightBridge/internal/outbound"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/modules"
+	proxymodule "github.com/WilliamWang1721/LightBridge/internal/modules/proxy"
+	"github.com/WilliamWang1721/LightBridge/internal/outbound"
 )
 
 type CoreBridge struct{}

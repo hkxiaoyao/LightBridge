@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/profile"
+	"github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/profile"
 	"github.com/stretchr/testify/require"
 )
 

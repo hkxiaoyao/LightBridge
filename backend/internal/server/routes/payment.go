@@ -1,10 +1,10 @@
 package routes
 
 import (
-	"github.com/Wei-Shaw/LightBridge/internal/handler"
-	"github.com/Wei-Shaw/LightBridge/internal/handler/admin"
-	"github.com/Wei-Shaw/LightBridge/internal/server/middleware"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/handler"
+	"github.com/WilliamWang1721/LightBridge/internal/handler/admin"
+	"github.com/WilliamWang1721/LightBridge/internal/server/middleware"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 
 	"github.com/gin-gonic/gin"
 )

@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/ctxkey"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/ctxkey"
 )
 
 // 本文件集中封装 Gemini / Antigravity 合并、以及 Custom Provider 引入后的「调度平台」语义。

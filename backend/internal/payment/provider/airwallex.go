@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/payment"
+	"github.com/WilliamWang1721/LightBridge/internal/payment"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )

@@ -12,9 +12,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/mihomo"
-	proxynode "github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/node"
-	"github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/profile"
+	"github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/mihomo"
+	proxynode "github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/node"
+	"github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/profile"
 )
 
 type NodeStore interface {

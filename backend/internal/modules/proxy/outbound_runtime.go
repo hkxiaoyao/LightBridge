@@ -6,10 +6,10 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/Wei-Shaw/LightBridge/internal/modules"
-	proxybinding "github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/binding"
-	proxyruntime "github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/runtime"
-	"github.com/Wei-Shaw/LightBridge/internal/outbound"
+	"github.com/WilliamWang1721/LightBridge/internal/modules"
+	proxybinding "github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/binding"
+	proxyruntime "github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/runtime"
+	"github.com/WilliamWang1721/LightBridge/internal/outbound"
 )
 
 type OutboundRuntime struct {

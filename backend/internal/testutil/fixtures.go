@@ -5,7 +5,7 @@ package testutil
 import (
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 )
 
 // NewTestUser 创建一个可用的测试用户，可通过 opts 覆盖默认值。

@@ -11,7 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/Wei-Shaw/LightBridge/ent/paymentauditlog"
+	"github.com/WilliamWang1721/LightBridge/ent/paymentauditlog"
 )
 
 // PaymentAuditLogCreate is the builder for creating a PaymentAuditLog entity.

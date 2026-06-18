@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/outbound"
+	"github.com/WilliamWang1721/LightBridge/internal/outbound"
 	"github.com/stretchr/testify/require"
 )
 

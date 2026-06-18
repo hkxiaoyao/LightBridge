@@ -7,11 +7,11 @@ import (
 	"database/sql"
 	"testing"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/authidentity"
-	"github.com/Wei-Shaw/LightBridge/ent/authidentitychannel"
-	"github.com/Wei-Shaw/LightBridge/ent/enttest"
-	infraerrors "github.com/Wei-Shaw/LightBridge/internal/pkg/errors"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/authidentity"
+	"github.com/WilliamWang1721/LightBridge/ent/authidentitychannel"
+	"github.com/WilliamWang1721/LightBridge/ent/enttest"
+	infraerrors "github.com/WilliamWang1721/LightBridge/internal/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"entgo.io/ent/dialect"

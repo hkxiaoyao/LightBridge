@@ -9,7 +9,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/setting"
+	"github.com/WilliamWang1721/LightBridge/ent/setting"
 )
 
 // Setting is the model entity for the Setting schema.

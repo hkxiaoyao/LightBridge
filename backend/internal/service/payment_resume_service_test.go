@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/payment"
-	infraerrors "github.com/Wei-Shaw/LightBridge/internal/pkg/errors"
+	"github.com/WilliamWang1721/LightBridge/internal/payment"
+	infraerrors "github.com/WilliamWang1721/LightBridge/internal/pkg/errors"
 )
 
 func TestNormalizeVisibleMethods(t *testing.T) {

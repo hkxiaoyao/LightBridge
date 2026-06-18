@@ -3,10 +3,10 @@ package repository
 import (
 	"context"
 
-	"github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/tlsfingerprintprofile"
-	"github.com/Wei-Shaw/LightBridge/internal/model"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/tlsfingerprintprofile"
+	"github.com/WilliamWang1721/LightBridge/internal/model"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 )
 
 type tlsFingerprintProfileRepository struct {

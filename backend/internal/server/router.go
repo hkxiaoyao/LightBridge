@@ -6,12 +6,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/handler"
-	middleware2 "github.com/Wei-Shaw/LightBridge/internal/server/middleware"
-	"github.com/Wei-Shaw/LightBridge/internal/server/routes"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
-	"github.com/Wei-Shaw/LightBridge/internal/web"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/handler"
+	middleware2 "github.com/WilliamWang1721/LightBridge/internal/server/middleware"
+	"github.com/WilliamWang1721/LightBridge/internal/server/routes"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/web"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"

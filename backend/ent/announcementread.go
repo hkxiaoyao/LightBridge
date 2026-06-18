@@ -9,9 +9,9 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/announcement"
-	"github.com/Wei-Shaw/LightBridge/ent/announcementread"
-	"github.com/Wei-Shaw/LightBridge/ent/user"
+	"github.com/WilliamWang1721/LightBridge/ent/announcement"
+	"github.com/WilliamWang1721/LightBridge/ent/announcementread"
+	"github.com/WilliamWang1721/LightBridge/ent/user"
 )
 
 // AnnouncementRead is the model entity for the AnnouncementRead schema.

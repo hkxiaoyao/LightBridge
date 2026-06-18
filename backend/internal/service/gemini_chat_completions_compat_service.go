@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/apicompat"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/geminicli"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
-	"github.com/Wei-Shaw/LightBridge/internal/util/responseheaders"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/apicompat"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/geminicli"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
+	"github.com/WilliamWang1721/LightBridge/internal/util/responseheaders"
 	"github.com/gin-gonic/gin"
 )
 

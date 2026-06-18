@@ -5,10 +5,10 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/ctxkey"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/ip"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/ctxkey"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/ip"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 
 	"github.com/gin-gonic/gin"
 )

@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/response"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/sysutil"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/response"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/sysutil"
 
 	"github.com/gin-gonic/gin"
 )

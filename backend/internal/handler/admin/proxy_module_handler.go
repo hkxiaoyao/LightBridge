@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	proxymodule "github.com/Wei-Shaw/LightBridge/internal/modules/proxy"
+	proxymodule "github.com/WilliamWang1721/LightBridge/internal/modules/proxy"
 	"github.com/gin-gonic/gin"
 )
 

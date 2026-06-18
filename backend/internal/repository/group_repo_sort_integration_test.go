@@ -3,8 +3,8 @@
 package repository
 
 import (
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/pagination"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/pagination"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 )
 
 // TestListWithAccountCountSort_AttachesActiveCount 验证通过 account_count 排序时，

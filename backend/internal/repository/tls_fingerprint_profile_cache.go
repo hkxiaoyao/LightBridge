@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/model"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/model"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 	"github.com/redis/go-redis/v9"
 )
 

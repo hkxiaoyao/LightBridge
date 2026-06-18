@@ -4,7 +4,7 @@ package model
 import (
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/tlsfingerprint"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/tlsfingerprint"
 )
 
 // TLSFingerprintProfile TLS 指纹配置模板

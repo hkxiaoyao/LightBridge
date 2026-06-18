@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	proxynode "github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/node"
-	"github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/profile"
+	proxynode "github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/node"
+	"github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/profile"
 	"github.com/stretchr/testify/require"
 )
 

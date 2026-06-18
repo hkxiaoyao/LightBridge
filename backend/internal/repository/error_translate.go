@@ -6,8 +6,8 @@ import (
 	"errors"
 	"strings"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	infraerrors "github.com/Wei-Shaw/LightBridge/internal/pkg/errors"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	infraerrors "github.com/WilliamWang1721/LightBridge/internal/pkg/errors"
 	"github.com/lib/pq"
 )
 

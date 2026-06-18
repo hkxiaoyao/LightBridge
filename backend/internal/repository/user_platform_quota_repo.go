@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/userplatformquota"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/timezone"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/userplatformquota"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/timezone"
 	"github.com/lib/pq"
 )
 

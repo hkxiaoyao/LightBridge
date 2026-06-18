@@ -8,18 +8,18 @@ package main
 
 import (
 	"context"
-	"github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/handler"
-	"github.com/Wei-Shaw/LightBridge/internal/handler/admin"
-	"github.com/Wei-Shaw/LightBridge/internal/modulemigration"
-	"github.com/Wei-Shaw/LightBridge/internal/modules"
-	"github.com/Wei-Shaw/LightBridge/internal/payment"
-	"github.com/Wei-Shaw/LightBridge/internal/repository"
-	"github.com/Wei-Shaw/LightBridge/internal/server"
-	"github.com/Wei-Shaw/LightBridge/internal/server/middleware"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
-	"github.com/Wei-Shaw/LightBridge/internal/service/aistudio_proxy"
+	"github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/handler"
+	"github.com/WilliamWang1721/LightBridge/internal/handler/admin"
+	"github.com/WilliamWang1721/LightBridge/internal/modulemigration"
+	"github.com/WilliamWang1721/LightBridge/internal/modules"
+	"github.com/WilliamWang1721/LightBridge/internal/payment"
+	"github.com/WilliamWang1721/LightBridge/internal/repository"
+	"github.com/WilliamWang1721/LightBridge/internal/server"
+	"github.com/WilliamWang1721/LightBridge/internal/server/middleware"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/service/aistudio_proxy"
 	"github.com/redis/go-redis/v9"
 	"log"
 	"net/http"
@@ -29,7 +29,7 @@ import (
 
 import (
 	_ "embed"
-	_ "github.com/Wei-Shaw/LightBridge/ent/runtime"
+	_ "github.com/WilliamWang1721/LightBridge/ent/runtime"
 )
 
 // Injectors from wire.go:

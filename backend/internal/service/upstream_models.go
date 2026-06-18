@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/antigravity"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/claude"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/geminicli"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/antigravity"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/claude"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/geminicli"
 )
 
 const upstreamModelsBodyLimit int64 = 8 << 20

@@ -3,7 +3,7 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 
-	"github.com/Wei-Shaw/LightBridge/internal/i18n"
+	"github.com/WilliamWang1721/LightBridge/internal/i18n"
 )
 
 // langFromContext resolves the language for client-facing error messages from

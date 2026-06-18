@@ -10,8 +10,8 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/account"
-	"github.com/Wei-Shaw/LightBridge/ent/proxy"
+	"github.com/WilliamWang1721/LightBridge/ent/account"
+	"github.com/WilliamWang1721/LightBridge/ent/proxy"
 )
 
 // Account is the model entity for the Account schema.

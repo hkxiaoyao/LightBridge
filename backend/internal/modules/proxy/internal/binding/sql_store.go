@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/profile"
+	"github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/profile"
 )
 
 type SQLStore struct {

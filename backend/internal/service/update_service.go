@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	infraerrors "github.com/Wei-Shaw/LightBridge/internal/pkg/errors"
+	infraerrors "github.com/WilliamWang1721/LightBridge/internal/pkg/errors"
 )
 
 var (
@@ -331,7 +331,8 @@ func (s *UpdateService) updateInfoForTargetVersion(ctx context.Context, targetVe
 		return &UpdateInfo{
 			CurrentVersion: s.currentVersion,
 			LatestVersion:  targetVersion,
-			HasUpdate:      compareVersions(s.currentVersion, targetVersion) != 0,
+			// 指定目标版本时，只要与当前版本字符串不同即允许安装（覆盖 preview↔production 同号互装）。
+			HasUpdate: normalizeVersionString(s.currentVersion) != normalizeVersionString(targetVersion),
 			ReleaseInfo: &ReleaseInfo{
 				Name:        release.Name,
 				Body:        release.Body,
@@ -624,8 +625,17 @@ func compareVersions(current, latest string) int {
 	return 0
 }
 
+// normalizeVersionString 去除前缀 v 并裁掉首尾空白，用于完整版本字符串（含预发布后缀）的精确比较。
+func normalizeVersionString(v string) string {
+	return strings.TrimPrefix(strings.TrimSpace(v), "v")
+}
+
 func parseVersion(v string) [3]int {
 	v = strings.TrimPrefix(v, "v")
+	// 去除预发布/构建后缀（如 0.2.4-preview、0.2.4+build），仅保留 MAJOR.MINOR.PATCH 用于数值比较。
+	if idx := strings.IndexAny(v, "-+"); idx >= 0 {
+		v = v[:idx]
+	}
 	parts := strings.Split(v, ".")
 	result := [3]int{0, 0, 0}
 	for i := 0; i < len(parts) && i < 3; i++ {

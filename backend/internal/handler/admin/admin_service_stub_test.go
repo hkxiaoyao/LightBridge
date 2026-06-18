@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/modules"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/modules"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 )
 
 type stubAdminService struct {

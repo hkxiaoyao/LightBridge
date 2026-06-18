@@ -12,10 +12,10 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/Wei-Shaw/LightBridge/ent/predicate"
-	"github.com/Wei-Shaw/LightBridge/ent/promocode"
-	"github.com/Wei-Shaw/LightBridge/ent/promocodeusage"
-	"github.com/Wei-Shaw/LightBridge/ent/user"
+	"github.com/WilliamWang1721/LightBridge/ent/predicate"
+	"github.com/WilliamWang1721/LightBridge/ent/promocode"
+	"github.com/WilliamWang1721/LightBridge/ent/promocodeusage"
+	"github.com/WilliamWang1721/LightBridge/ent/user"
 )
 
 // PromoCodeUsageQuery is the builder for querying PromoCodeUsage entities.

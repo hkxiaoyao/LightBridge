@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"time"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/paymentauditlog"
-	"github.com/Wei-Shaw/LightBridge/ent/paymentorder"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/paymentauditlog"
+	"github.com/WilliamWang1721/LightBridge/ent/paymentorder"
 )
 
 // --- Dashboard & Analytics ---

@@ -14,10 +14,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/openai"
-	"github.com/Wei-Shaw/LightBridge/internal/util/urlvalidator"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/openai"
+	"github.com/WilliamWang1721/LightBridge/internal/util/urlvalidator"
 	"go.uber.org/zap"
 )
 

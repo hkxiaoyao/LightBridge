@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/geminicli"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/pagination"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/geminicli"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/pagination"
 )
 
 const testGeminiCLIOAuthClientID = "test-gemini-cli-oauth-client-id"

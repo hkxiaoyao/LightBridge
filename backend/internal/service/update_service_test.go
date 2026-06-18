@@ -116,3 +116,64 @@ func TestUpdateServiceListVersionReleasesIncludesHistory(t *testing.T) {
 	require.True(t, releases[1].Current)
 	require.False(t, releases[1].Latest)
 }
+
+func TestUpdateServiceListVersionReleasesIncludesPreview(t *testing.T) {
+	svc := NewUpdateService(
+		&updateServiceCacheStub{},
+		&updateServiceGitHubClientStub{
+			release: &GitHubRelease{TagName: "v0.2.4", Name: "v0.2.4"},
+			releases: []GitHubRelease{
+				{
+					TagName:     "v0.2.4-preview",
+					Name:        "v0.2.4-preview",
+					Prerelease:  true,
+					PublishedAt: "2026-06-10T00:00:00Z",
+				},
+				{
+					TagName:     "v0.2.4",
+					Name:        "v0.2.4",
+					PublishedAt: "2026-06-09T00:00:00Z",
+				},
+			},
+		},
+		"0.2.3",
+		"release",
+	)
+
+	releases, _, err := svc.ListVersionReleases(context.Background(), true)
+
+	require.NoError(t, err)
+	require.Len(t, releases, 2)
+	require.Equal(t, "0.2.4-preview", releases[0].Version)
+	require.True(t, releases[0].Prerelease)
+	require.Equal(t, "0.2.4", releases[1].Version)
+	require.False(t, releases[1].Prerelease)
+}
+
+func TestUpdateServicePreviewProductionSameNumberAreInstallable(t *testing.T) {
+	// 当前为正式版 0.2.4，应允许安装同号的 preview 0.2.4-preview（HasUpdate=true）。
+	svc := NewUpdateService(
+		&updateServiceCacheStub{},
+		&updateServiceGitHubClientStub{
+			releases: []GitHubRelease{
+				{TagName: "v0.2.4-preview", Name: "v0.2.4-preview", Prerelease: true},
+				{TagName: "v0.2.4", Name: "v0.2.4"},
+			},
+		},
+		"0.2.4",
+		"release",
+	)
+
+	info, err := svc.updateInfoForTargetVersion(context.Background(), "0.2.4-preview")
+
+	require.NoError(t, err)
+	require.True(t, info.HasUpdate)
+	require.Equal(t, "0.2.4-preview", info.LatestVersion)
+}
+
+func TestParseVersionStripsPrereleaseSuffix(t *testing.T) {
+	require.Equal(t, [3]int{0, 2, 4}, parseVersion("0.2.4-preview"))
+	require.Equal(t, [3]int{0, 2, 4}, parseVersion("v0.2.4-rc.1"))
+	require.Equal(t, [3]int{1, 2, 3}, parseVersion("1.2.3+build.5"))
+	require.Equal(t, 0, compareVersions("0.2.4-preview", "0.2.4"))
+}

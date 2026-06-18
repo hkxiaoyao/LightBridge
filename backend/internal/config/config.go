@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/i18n"
+	"github.com/WilliamWang1721/LightBridge/internal/i18n"
 	"github.com/spf13/viper"
 )
 

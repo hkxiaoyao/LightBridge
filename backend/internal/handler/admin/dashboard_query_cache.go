@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/usagestats"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/usagestats"
 )
 
 var (

@@ -3,10 +3,10 @@ package handler
 import (
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/handler/admin"
-	"github.com/Wei-Shaw/LightBridge/internal/handler/dto"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/response"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/handler/admin"
+	"github.com/WilliamWang1721/LightBridge/internal/handler/dto"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/response"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 
 	"github.com/gin-gonic/gin"
 )

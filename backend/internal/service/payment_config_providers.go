@@ -8,12 +8,12 @@ import (
 	"strconv"
 	"strings"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/ent/paymentorder"
-	"github.com/Wei-Shaw/LightBridge/ent/paymentproviderinstance"
-	"github.com/Wei-Shaw/LightBridge/internal/payment"
-	"github.com/Wei-Shaw/LightBridge/internal/payment/provider"
-	infraerrors "github.com/Wei-Shaw/LightBridge/internal/pkg/errors"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent/paymentorder"
+	"github.com/WilliamWang1721/LightBridge/ent/paymentproviderinstance"
+	"github.com/WilliamWang1721/LightBridge/internal/payment"
+	"github.com/WilliamWang1721/LightBridge/internal/payment/provider"
+	infraerrors "github.com/WilliamWang1721/LightBridge/internal/pkg/errors"
 )
 
 // validateProviderConfig runs the provider's constructor to surface config-level

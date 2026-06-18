@@ -7,10 +7,10 @@ import (
 	"log"
 	"time"
 
-	_ "github.com/Wei-Shaw/LightBridge/ent/runtime"
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/repository"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	_ "github.com/WilliamWang1721/LightBridge/ent/runtime"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/repository"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 )
 
 func main() {

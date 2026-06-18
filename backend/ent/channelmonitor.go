@@ -10,8 +10,8 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/channelmonitor"
-	"github.com/Wei-Shaw/LightBridge/ent/channelmonitorrequesttemplate"
+	"github.com/WilliamWang1721/LightBridge/ent/channelmonitor"
+	"github.com/WilliamWang1721/LightBridge/ent/channelmonitorrequesttemplate"
 )
 
 // ChannelMonitor is the model entity for the ChannelMonitor schema.

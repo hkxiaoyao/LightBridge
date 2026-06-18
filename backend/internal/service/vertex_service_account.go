@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/proxyurl"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/proxyutil"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/proxyurl"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/proxyutil"
 	"github.com/golang-jwt/jwt/v5"
 )
 

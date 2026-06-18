@@ -3,8 +3,8 @@ package mihomo
 import (
 	"testing"
 
-	proxynode "github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/node"
-	proxyprofile "github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/profile"
+	proxynode "github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/node"
+	proxyprofile "github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/profile"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )

@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/modulemigration"
+	"github.com/WilliamWang1721/LightBridge/internal/modulemigration"
 
 	_ "github.com/lib/pq"
 	_ "modernc.org/sqlite"

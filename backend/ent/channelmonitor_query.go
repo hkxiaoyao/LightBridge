@@ -13,11 +13,11 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/Wei-Shaw/LightBridge/ent/channelmonitor"
-	"github.com/Wei-Shaw/LightBridge/ent/channelmonitordailyrollup"
-	"github.com/Wei-Shaw/LightBridge/ent/channelmonitorhistory"
-	"github.com/Wei-Shaw/LightBridge/ent/channelmonitorrequesttemplate"
-	"github.com/Wei-Shaw/LightBridge/ent/predicate"
+	"github.com/WilliamWang1721/LightBridge/ent/channelmonitor"
+	"github.com/WilliamWang1721/LightBridge/ent/channelmonitordailyrollup"
+	"github.com/WilliamWang1721/LightBridge/ent/channelmonitorhistory"
+	"github.com/WilliamWang1721/LightBridge/ent/channelmonitorrequesttemplate"
+	"github.com/WilliamWang1721/LightBridge/ent/predicate"
 )
 
 // ChannelMonitorQuery is the builder for querying ChannelMonitor entities.

@@ -11,9 +11,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/Wei-Shaw/LightBridge/ent/announcement"
-	"github.com/Wei-Shaw/LightBridge/ent/announcementread"
-	"github.com/Wei-Shaw/LightBridge/internal/domain"
+	"github.com/WilliamWang1721/LightBridge/ent/announcement"
+	"github.com/WilliamWang1721/LightBridge/ent/announcementread"
+	"github.com/WilliamWang1721/LightBridge/internal/domain"
 )
 
 // AnnouncementCreate is the builder for creating a Announcement entity.

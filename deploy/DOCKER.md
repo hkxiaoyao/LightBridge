@@ -72,5 +72,5 @@ volumes:
 
 ## Links
 
-- [GitHub Repository](https://github.com/weishaw/LightBridge)
-- [Documentation](https://github.com/weishaw/LightBridge#readme)
+- [GitHub Repository](https://github.com/WilliamWang1721/LightBridge)
+- [Documentation](https://github.com/WilliamWang1721/LightBridge#readme)

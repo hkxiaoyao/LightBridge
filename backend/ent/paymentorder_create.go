@@ -11,8 +11,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/Wei-Shaw/LightBridge/ent/paymentorder"
-	"github.com/Wei-Shaw/LightBridge/ent/user"
+	"github.com/WilliamWang1721/LightBridge/ent/paymentorder"
+	"github.com/WilliamWang1721/LightBridge/ent/user"
 )
 
 // PaymentOrderCreate is the builder for creating a PaymentOrder entity.

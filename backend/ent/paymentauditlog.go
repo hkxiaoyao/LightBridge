@@ -9,7 +9,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/LightBridge/ent/paymentauditlog"
+	"github.com/WilliamWang1721/LightBridge/ent/paymentauditlog"
 )
 
 // PaymentAuditLog is the model entity for the PaymentAuditLog schema.

@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/Wei-Shaw/LightBridge/internal/modules"
-	proxybinding "github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/binding"
-	"github.com/Wei-Shaw/LightBridge/internal/outbound"
+	"github.com/WilliamWang1721/LightBridge/internal/modules"
+	proxybinding "github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/binding"
+	"github.com/WilliamWang1721/LightBridge/internal/outbound"
 	"github.com/stretchr/testify/require"
 )
 

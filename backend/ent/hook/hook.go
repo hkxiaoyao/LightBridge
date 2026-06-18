@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Wei-Shaw/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/ent"
 )
 
 // The APIKeyFunc type is an adapter to allow the use of ordinary

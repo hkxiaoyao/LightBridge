@@ -19,12 +19,12 @@ import (
 
 	"github.com/andybalholm/brotli"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/proxyurl"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/proxyutil"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/tlsfingerprint"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
-	"github.com/Wei-Shaw/LightBridge/internal/util/urlvalidator"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/proxyurl"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/proxyutil"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/tlsfingerprint"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/util/urlvalidator"
 )
 
 // 默认配置常量

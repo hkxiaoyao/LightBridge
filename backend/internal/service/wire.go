@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"time"
 
-	dbent "github.com/Wei-Shaw/LightBridge/ent"
-	"github.com/Wei-Shaw/LightBridge/internal/config"
-	"github.com/Wei-Shaw/LightBridge/internal/payment"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/antigravity"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
+	dbent "github.com/WilliamWang1721/LightBridge/ent"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/payment"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/antigravity"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
 	"github.com/google/wire"
 	"github.com/redis/go-redis/v9"
 )

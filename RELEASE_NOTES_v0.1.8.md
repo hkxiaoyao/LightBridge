@@ -165,6 +165,6 @@ export ADMIN_TOKEN="your-admin-token"
 
 ---
 
-**完整变更日志**: [v0.1.7...v0.1.8](https://github.com/Wei-Shaw/LightBridge/compare/v0.1.7...v0.1.8)
+**完整变更日志**: [v0.1.7...v0.1.8](https://github.com/WilliamWang1721/LightBridge/compare/v0.1.7...v0.1.8)
 
-**下载地址**: [GitHub Releases](https://github.com/Wei-Shaw/LightBridge/releases/tag/v0.1.8)
+**下载地址**: [GitHub Releases](https://github.com/WilliamWang1721/LightBridge/releases/tag/v0.1.8)

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/geminicli"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/googleapi"
-	"github.com/Wei-Shaw/LightBridge/internal/service"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/geminicli"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/googleapi"
+	"github.com/WilliamWang1721/LightBridge/internal/service"
 
 	"github.com/imroc/req/v3"
 )

@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"github.com/Wei-Shaw/LightBridge/internal/handler/admin"
+	"github.com/WilliamWang1721/LightBridge/internal/handler/admin"
 )
 
 // AdminHandlers contains all admin-related HTTP handlers

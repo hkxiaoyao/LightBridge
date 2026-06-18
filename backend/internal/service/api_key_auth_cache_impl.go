@@ -10,7 +10,7 @@ import (
 	"math/rand/v2"
 	"time"
 
-	"github.com/Wei-Shaw/LightBridge/internal/config"
+	"github.com/WilliamWang1721/LightBridge/internal/config"
 	"github.com/dgraph-io/ristretto"
 )
 

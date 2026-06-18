@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"github.com/Wei-Shaw/LightBridge/internal/handler"
+	"github.com/WilliamWang1721/LightBridge/internal/handler"
 	"github.com/gin-gonic/gin"
 	"path/filepath"
 	"strings"

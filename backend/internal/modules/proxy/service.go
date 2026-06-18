@@ -10,9 +10,9 @@ import (
 	"net/url"
 	"strings"
 
-	proxynode "github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/node"
-	"github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/profile"
-	proxyruntime "github.com/Wei-Shaw/LightBridge/internal/modules/proxy/internal/runtime"
+	proxynode "github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/node"
+	"github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/profile"
+	proxyruntime "github.com/WilliamWang1721/LightBridge/internal/modules/proxy/internal/runtime"
 )
 
 type Service struct {

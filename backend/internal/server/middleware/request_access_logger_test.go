@@ -8,8 +8,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/ctxkey"
-	"github.com/Wei-Shaw/LightBridge/internal/pkg/logger"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/ctxkey"
+	"github.com/WilliamWang1721/LightBridge/internal/pkg/logger"
 	"github.com/gin-gonic/gin"
 )
 

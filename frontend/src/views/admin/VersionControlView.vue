@@ -1,16 +1,7 @@
 <template>
   <AppLayout>
   <div class="space-y-6">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-          {{ t('version.control') }}
-        </h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-dark-400">
-          {{ t('version.controlDescription') }}
-        </p>
-      </div>
-
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end">
       <button
         type="button"
         class="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-dark-600 dark:bg-dark-800 dark:text-dark-200 dark:hover:bg-dark-700"
@@ -22,7 +13,7 @@
       </button>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-3">
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-dark-700 dark:bg-dark-800">
         <p class="text-sm text-gray-500 dark:text-dark-400">{{ t('version.currentVersion') }}</p>
         <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">
@@ -40,6 +31,35 @@
         <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">
           {{ isReleaseBuild ? t('version.releaseBuild') : t('version.sourceMode') }}
         </p>
+      </div>
+      <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-dark-700 dark:bg-dark-800">
+        <p class="text-sm text-gray-500 dark:text-dark-400">{{ t('version.versionType') }}</p>
+        <div class="mt-2 inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 dark:border-dark-600 dark:bg-dark-700">
+          <button
+            type="button"
+            :class="[
+              'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+              versionType === 'production'
+                ? 'bg-white text-primary-700 shadow-sm dark:bg-dark-800 dark:text-primary-300'
+                : 'text-gray-500 hover:text-gray-700 dark:text-dark-400 dark:hover:text-dark-200'
+            ]"
+            @click="versionType = 'production'"
+          >
+            {{ t('version.production') }}
+          </button>
+          <button
+            type="button"
+            :class="[
+              'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+              versionType === 'preview'
+                ? 'bg-white text-amber-700 shadow-sm dark:bg-dark-800 dark:text-amber-300'
+                : 'text-gray-500 hover:text-gray-700 dark:text-dark-400 dark:hover:text-dark-200'
+            ]"
+            @click="versionType = 'preview'"
+          >
+            {{ t('version.preview') }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -132,7 +152,7 @@
       <div v-else-if="publishedReleases.length === 0" class="px-5 py-10 text-center">
         <Icon name="inbox" size="xl" :stroke-width="2" class="mx-auto text-gray-400" />
         <p class="mt-3 text-sm font-medium text-gray-900 dark:text-white">
-          {{ t('version.noPublishedVersions') }}
+          {{ t('version.noVersionsOfType') }}
         </p>
       </div>
 
@@ -163,7 +183,13 @@
                 v-if="release.prerelease"
                 class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
               >
-                {{ t('version.prerelease') }}
+                {{ t('version.preview') }}
+              </span>
+              <span
+                v-else
+                class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+              >
+                {{ t('version.production') }}
               </span>
             </div>
             <div class="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-dark-400">
@@ -272,9 +298,15 @@ const confirmDialogOpen = ref(false)
 const selectedRelease = ref<VersionRelease | null>(null)
 const upgradeChangesRelease = ref<VersionRelease | null>(null)
 const upgradeChangesOpen = ref(false)
+const versionType = ref<'production' | 'preview'>('production')
 
 const isReleaseBuild = computed(() => buildType.value === 'release')
-const publishedReleases = computed(() => releases.value.filter((release) => !release.draft))
+const publishedReleases = computed(() =>
+  releases.value.filter((release) => {
+    if (release.draft) return false
+    return versionType.value === 'preview' ? !!release.prerelease : !release.prerelease
+  })
+)
 const installConfirmMessage = computed(() => {
   const version = selectedRelease.value?.version ? displayVersion(selectedRelease.value.version) : ''
   return t('version.installConfirmMessage', { version })

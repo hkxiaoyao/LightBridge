@@ -2,7 +2,7 @@
 package schema
 
 import (
-	"github.com/Wei-Shaw/LightBridge/ent/schema/mixins"
+	"github.com/WilliamWang1721/LightBridge/ent/schema/mixins"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"

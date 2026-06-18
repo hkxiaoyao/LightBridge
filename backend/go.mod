@@ -1,4 +1,4 @@
-module github.com/Wei-Shaw/LightBridge
+module github.com/WilliamWang1721/LightBridge
 
 go 1.26.3
 
